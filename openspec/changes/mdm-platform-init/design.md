@@ -20,9 +20,9 @@
 
 ## 设计决策
 
-### 决策一：独立 Maven 模块 `ruoyi-modules/mdm`
+### 决策一：独立 Maven 模块 `ruoyi-mdm`
 
-新增 `ruoyi-modules/mdm`，下分六个子包（model、coderule、standard、maintenance、quality、distribution），以 Maven 依赖方式挂入 ruoyi-admin 主应用。
+新增 `ruoyi-mdm` 独立模块（与 ruoyi-system 等平级，符合 RuoYi-Vue 单体模块布局），下分六个子包（model、coderule、standard、maintenance、quality、distribution），以 Maven 依赖方式挂入 ruoyi-admin 主应用。
 
 - **理由**：与 ruoyi-system 解耦，包边界清晰；未来迁移微服务可整模块搬迁；独立 `mdm_*` 表空间便于运维识别
 - **备选**：并入 ruoyi-system —— 开发更省事，但耦合系统管理，MDM 专属逻辑混杂

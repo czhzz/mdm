@@ -32,7 +32,7 @@
 
 ## Impact
 
-- **后端**（mdm-backend）：新增 `ruoyi-modules/mdm` 独立 Maven 模块（model、coderule、standard、maintenance、quality、distribution 六个子包）；新增 `mdm_*` 系列数据表；复用若依 ruoyi-system 的 RBAC、字典、参数、日志
+- **后端**（mdm-backend）：新增 `ruoyi-mdm` 独立 Maven 模块（与 ruoyi-system 平级，model、coderule、standard、maintenance、quality、distribution 六个子包）；新增 `mdm_*` 系列数据表；复用若依 ruoyi-system 的 RBAC、字典、参数、日志
 - **前端**（mdm-frontend）：新增 mdm 菜单与页面（模型管理、编码规则、数据标准、数据维护、数据质量、数据分发），复用若依布局与组件
 - **API**：新增 `/mdm/**` 系列 REST 接口，遵循若依统一响应体 `AjaxResult` 与分页 `TableDataInfo`
 - **依赖**：沿用 MySQL + Redis，不引入新中间件；授权沿用若依 JWT + RBAC

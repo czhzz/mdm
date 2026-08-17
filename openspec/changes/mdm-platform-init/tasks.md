@@ -5,11 +5,11 @@
 
 ## 第 1 周：工程底座与模型管理基础（10 人天）
 
-- [ ] 1.1 创建 `ruoyi-modules/mdm` Maven 模块骨架（pom.xml + model/coderule/standard/maintenance/quality/distribution 六个子包），在 ruoyi-admin/pom.xml 引入依赖（工时：1.5 人天）
-- [ ] 1.2 编写 `sql/mdm/init.sql`：mdm 元数据表（object/attribute/category/code_rule/dict/rule/quality/distribution/app/audit 等）+ 种子字典与菜单数据（工时：2.5 人天）
-- [ ] 1.3 前端新增 mdm 菜单路由与页面骨架（空页面 + 路由注册 + 侧边栏菜单）（工时：2 人天）
-- [ ] 2.1 后端：数据对象与分类 CRUD 接口（mdm_object、mdm_category），对象编码全局唯一校验（工时：2 人天）
-- [ ] 2.2 后端：属性定义接口（mdm_attribute），对象内属性编码唯一校验（工时：2 人天）
+- [x] 1.1 创建 `ruoyi-mdm` Maven 模块骨架（与 ruoyi-system 平级，pom.xml + model/coderule/standard/maintenance/quality/distribution 六个子包），在 ruoyi-admin/pom.xml 引入依赖（工时：1.5 人天）
+- [x] 1.2 编写 `sql/mdm/init.sql`：mdm 元数据表（object/attribute/category 第一期 + 种子字典与菜单数据）（工时：2.5 人天）
+- [x] 1.3 前端新增 mdm 菜单路由与页面骨架（空页面 + 路由注册 + 侧边栏菜单）（工时：2 人天）
+- [x] 2.1 后端：数据对象与分类 CRUD 接口（mdm_object、mdm_category），对象编码全局唯一校验（工时：2 人天）
+- [x] 2.2 后端：属性定义接口（mdm_attribute），对象内属性编码唯一校验（工时：2 人天）
 
 ## 第 2 周：模型发布与动态维护（10 人天）
 
