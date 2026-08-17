@@ -82,11 +82,13 @@ mdm/
 ### 5.1 数据库初始化
 ```sql
 -- 创建库
-CREATE DATABASE IF NOT EXISTS `ry-vue` DEFAULT CHARACTER SET utf8mb4;
+CREATE DATABASE IF NOT EXISTS `mdm` DEFAULT CHARACTER SET utf8mb4;
 -- 导入主库脚本（含默认数据）
-mysql -uroot -p ry-vue < sql/ry_20260417.sql
+mysql -uroot -p mdm < sql/ry_20260417.sql
 -- 导入定时任务库脚本
-mysql -uroot -p ry-vue < sql/quartz.sql
+mysql -uroot -p mdm < sql/quartz.sql
+-- 导入 MDM 初始化脚本
+mysql -uroot -p mdm < sql/mdm/init.sql
 ```
 
 ### 5.2 后端启动

@@ -11,7 +11,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ### 后端（mdm-backend/，Spring Boot 2.5.15 / Java 8）
 - 构建：`mvn clean package -DskipTests`（项目无单元测试）
 - 启动：`cd ruoyi-admin && mvn spring-boot:run`（端口 8080），或 `java -jar ruoyi-admin/target/ruoyi-admin.jar`
-- 依赖：MySQL 库 `ry-vue`（初始化 `sql/ry_20260417.sql` + `sql/quartz.sql`）+ Redis，连接配置在 `ruoyi-admin/src/main/resources/application-druid.yml` 与 `application.yml`
+- 依赖：MySQL 库 `mdm`（初始化 `sql/ry_20260417.sql` + `sql/quartz.sql` + `sql/mdm/init.sql`）+ Redis，连接配置在 `ruoyi-admin/src/main/resources/application-druid.yml` 与 `application.yml`
 
 ### 前端（mdm-frontend/，Vue 3.5 + TS + Vite 6）
 - 安装：`npm install`（Node 22，`.nvmrc` 已指定）
@@ -37,7 +37,7 @@ MDM 业务规划新增 `ruoyi-modules/mdm` 独立模块（当前不存在），�
 - `src/store/`：Pinia 状态；`src/directive/`：权限指令（v-hasPermi 等）
 
 ### 数据与中间件
-- MySQL 库 `ry-vue`：`sys_*` 若依系统表；MDM 将新增 `mdm_*` 系列表（脚本规划于 `sql/mdm/init.sql`）
+- MySQL 库 `mdm`：`sys_*` 若依系统表 + `mdm_*` 主数据表
 - Redis：验证码、Token 校验、缓存；编码流水号将基于 Redis INCR
 - 部署架构见 `doc/deploy-architecture.md`（Nginx + 单体后端 + MySQL + Redis）
 
