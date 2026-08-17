@@ -1,0 +1,44 @@
+# ---- 本地工具配置 ----
+.claude/
+
+# ---- IDE ----
+.idea/
+.vscode/
+*.iml
+*.ipr
+*.iws
+.classpath
+.project
+.settings/
+
+# ---- macOS ----
+.DS_Store
+Thumbs.db
+
+# ---- Java / Maven (ruoyi-vue) ----
+target/
+*.class
+*.jar
+*.war
+*.ear
+*.log
+dependency-reduced-pom.xml
+
+# ---- Node / 前端 (ruoyi-ui) ----
+node_modules/
+dist/
+dist-ssr/
+.vite/
+.eslintcache
+npm-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# ---- 本地环境变量（保留 .env.development / .env.production） ----
+.env.local
+.env.*.local
+
+# ---- 日志与临时文件 ----
+logs/
+tmp/
+temp/
