@@ -45,6 +45,9 @@ services:
       REDIS_PORT: "6379"
     ports:
       - "8080:8080"
+    volumes:
+      - ./logs:/app/logs
+      - ./uploadPath:/app/uploadPath
     depends_on:
       mysql:
         condition: service_healthy
