@@ -1,0 +1,100 @@
+package com.ruoyi.web.controller.mdm;
+
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+import com.ruoyi.common.annotation.Log;
+import com.ruoyi.common.core.controller.BaseController;
+import com.ruoyi.common.core.domain.AjaxResult;
+import com.ruoyi.common.core.page.TableDataInfo;
+import com.ruoyi.common.enums.BusinessType;
+import com.ruoyi.mdm.maintenance.service.IMdmDataService;
+
+/**
+ * 主数据动态数据 信息操作处理（按对象编码动态生成 CRUD）
+ *
+ * @author ruoyi
+ */
+@RestController
+@RequestMapping("/mdm/data")
+public class MdmDataController extends BaseController
+{
+    @Autowired
+    private IMdmDataService dataService;
+
+    /**
+     * 查询主数据列表（手动分页，动态属性列为查询条件）
+     */
+    @PreAuthorize("@ss.hasPermi('mdm:maintenance:list')")
+    @GetMapping("/{objectCode}/list")
+    public TableDataInfo list(@PathVariable String objectCode, @RequestParam Map<String, Object> params)
+    {
+        int pageNum = Integer.parseInt(String.valueOf(params.getOrDefault("pageNum", "1")));
+        int pageSize = Integer.parseInt(String.valueOf(params.getOrDefault("pageSize", "10")));
+        Map<String, Object> query = new HashMap<>(params);
+        query.remove("pageNum");
+        query.remove("pageSize");
+        query.remove("orderByColumn");
+        query.remove("isAsc");
+        List<Map<String, Object>> list = dataService.selectDataList(objectCode, query, pageNum, pageSize);
+        long total = dataService.countData(objectCode, query);
+        TableDataInfo dataTable = new TableDataInfo();
+        dataTable.setRows(list);
+        dataTable.setTotal(total);
+        return dataTable;
+    }
+
+    /**
+     * 获取主数据详细信息
+     */
+    @PreAuthorize("@ss.hasPermi('mdm:maintenance:query')")
+    @GetMapping("/{objectCode}/{id}")
+    public AjaxResult getInfo(@PathVariable String objectCode, @PathVariable Long id)
+    {
+        return success(dataService.selectDataById(objectCode, id));
+    }
+
+    /**
+     * 新增主数据
+     */
+    @PreAuthorize("@ss.hasPermi('mdm:maintenance:add')")
+    @Log(title = "主数据", businessType = BusinessType.INSERT)
+    @PostMapping("/{objectCode}")
+    public AjaxResult add(@PathVariable String objectCode, @RequestBody Map<String, Object> data)
+    {
+        return toAjax(dataService.insertData(objectCode, data));
+    }
+
+    /**
+     * 修改主数据
+     */
+    @PreAuthorize("@ss.hasPermi('mdm:maintenance:edit')")
+    @Log(title = "主数据", businessType = BusinessType.UPDATE)
+    @PutMapping("/{objectCode}/{id}")
+    public AjaxResult edit(@PathVariable String objectCode, @PathVariable Long id, @RequestBody Map<String, Object> data)
+    {
+        return toAjax(dataService.updateData(objectCode, id, data));
+    }
+
+    /**
+     * 删除主数据
+     */
+    @PreAuthorize("@ss.hasPermi('mdm:maintenance:remove')")
+    @Log(title = "主数据", businessType = BusinessType.DELETE)
+    @DeleteMapping("/{objectCode}/{ids}")
+    public AjaxResult remove(@PathVariable String objectCode, @PathVariable Long[] ids)
+    {
+        return toAjax(dataService.deleteDataByIds(objectCode, ids));
+    }
+}

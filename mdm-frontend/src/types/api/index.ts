@@ -27,3 +27,6 @@ export * from "./monitor/online";
 
 // 代码生成模块
 export * from "./tool/gen";
+
+// MDM 主数据模块
+export * from "./mdm";

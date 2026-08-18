@@ -81,6 +81,9 @@ create table mdm_attribute (
 -- ----------------------------
 -- 4. 菜单与权限
 -- ----------------------------
+-- 清理已存在的 mdm 菜单（保证脚本可重复执行）
+delete from sys_role_menu where menu_id between 2000 and 2022;
+delete from sys_menu where menu_id between 2000 and 2022;
 -- 一级目录
 insert into sys_menu values('2000', '主数据管理', '0', '10', 'mdm',            null,                    '', '', 1, 0, 'M', '0', '0', '',                    'tree-table', 'admin', sysdate(), '', null, '主数据管理目录');
 -- 二级菜单
@@ -103,6 +106,11 @@ insert into sys_menu values('2015', '属性查询', '2001', '9', '', null, '', '
 insert into sys_menu values('2016', '属性新增', '2001', '10', '', null, '', '', 1, 0, 'F', '0', '0', 'mdm:attribute:add',  '#', 'admin', sysdate(), '', null, '');
 insert into sys_menu values('2017', '属性修改', '2001', '11', '', null, '', '', 1, 0, 'F', '0', '0', 'mdm:attribute:edit', '#', 'admin', sysdate(), '', null, '');
 insert into sys_menu values('2018', '属性删除', '2001', '12', '', null, '', '', 1, 0, 'F', '0', '0', 'mdm:attribute:remove','#', 'admin', sysdate(), '', null, '');
+-- 数据维护按钮权限
+insert into sys_menu values('2019', '数据查询', '2004', '1', '', null, '', '', 1, 0, 'F', '0', '0', 'mdm:maintenance:query', '#', 'admin', sysdate(), '', null, '');
+insert into sys_menu values('2020', '数据新增', '2004', '2', '', null, '', '', 1, 0, 'F', '0', '0', 'mdm:maintenance:add',   '#', 'admin', sysdate(), '', null, '');
+insert into sys_menu values('2021', '数据修改', '2004', '3', '', null, '', '', 1, 0, 'F', '0', '0', 'mdm:maintenance:edit',  '#', 'admin', sysdate(), '', null, '');
+insert into sys_menu values('2022', '数据删除', '2004', '4', '', null, '', '', 1, 0, 'F', '0', '0', 'mdm:maintenance:remove','#', 'admin', sysdate(), '', null, '');
 
 -- ----------------------------
 -- 5. 种子字典

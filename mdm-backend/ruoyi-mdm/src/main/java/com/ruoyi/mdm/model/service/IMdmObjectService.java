@@ -57,4 +57,12 @@ public interface IMdmObjectService
      * @return 结果（true唯一 false不唯一）
      */
     public boolean checkObjectCodeUnique(MdmObject mdmObject);
+
+    /**
+     * 发布主数据对象（校验后动态建表 mdm_data_<obj_code>）
+     *
+     * @param objectId 对象ID
+     * @return 结果
+     */
+    public int publishObject(Long objectId);
 }

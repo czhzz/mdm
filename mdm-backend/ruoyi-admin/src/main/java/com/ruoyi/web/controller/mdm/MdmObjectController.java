@@ -1,6 +1,8 @@
 package com.ruoyi.web.controller.mdm;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;
@@ -17,7 +19,9 @@ import com.ruoyi.common.core.controller.BaseController;
 import com.ruoyi.common.core.domain.AjaxResult;
 import com.ruoyi.common.core.page.TableDataInfo;
 import com.ruoyi.common.enums.BusinessType;
+import com.ruoyi.mdm.model.domain.MdmAttribute;
 import com.ruoyi.mdm.model.domain.MdmObject;
+import com.ruoyi.mdm.model.service.IMdmAttributeService;
 import com.ruoyi.mdm.model.service.IMdmObjectService;
 
 /**
@@ -31,6 +35,9 @@ public class MdmObjectController extends BaseController
 {
     @Autowired
     private IMdmObjectService objectService;
+
+    @Autowired
+    private IMdmAttributeService attributeService;
 
     /**
      * 查询主数据对象列表
@@ -78,6 +85,32 @@ public class MdmObjectController extends BaseController
     public AjaxResult edit(@Validated @RequestBody MdmObject mdmObject)
     {
         return toAjax(objectService.updateObject(mdmObject));
+    }
+
+    /**
+     * 获取对象模型元数据（对象 + 属性，供维护页动态渲染）
+     */
+    @PreAuthorize("@ss.hasPermi('mdm:model:query')")
+    @GetMapping("/meta/{objectId}")
+    public AjaxResult meta(@PathVariable Long objectId)
+    {
+        Map<String, Object> result = new HashMap<>();
+        result.put("object", objectService.selectObjectById(objectId));
+        MdmAttribute query = new MdmAttribute();
+        query.setObjectId(objectId);
+        result.put("attributes", attributeService.selectAttributeList(query));
+        return success(result);
+    }
+
+    /**
+     * 发布主数据对象（动态建表）
+     */
+    @PreAuthorize("@ss.hasPermi('mdm:model:edit')")
+    @Log(title = "主数据对象", businessType = BusinessType.UPDATE)
+    @PutMapping("/publish/{objectId}")
+    public AjaxResult publish(@PathVariable Long objectId)
+    {
+        return toAjax(objectService.publishObject(objectId));
     }
 
     /**
