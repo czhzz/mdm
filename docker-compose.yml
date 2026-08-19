@@ -4,7 +4,7 @@ services:
     container_name: mdm-mysql
     environment:
       MYSQL_ROOT_PASSWORD: ${MYSQL_PASSWORD:-password}
-      MYSQL_DATABASE: mdm
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-mdm}
     command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
     ports:
       - "3306:3306"
@@ -15,7 +15,8 @@ services:
       - ./mdm-backend/sql/quartz.sql:/docker-entrypoint-initdb.d/02-quartz.sql:ro
       - ./mdm-backend/sql/mdm/init.sql:/docker-entrypoint-initdb.d/03-mdm.sql:ro
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-ppassword"]
+      # 引用容器内环境变量（$$ 由容器展开，避免明文密码；随 MYSQL_ROOT_PASSWORD 变化）
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -uroot -p\"$$MYSQL_ROOT_PASSWORD\" --silent"]
       interval: 5s
       timeout: 5s
       retries: 20
@@ -47,11 +48,14 @@ services:
       MYSQL_USERNAME: root
       REDIS_HOST: redis
       REDIS_PORT: 6379
+      # 容器内端口固定 8080（与前端 nginx 反代一致，不随环境变量变化）
+      SERVER_PORT: "8080"
       # 仅密码从项目根 .env 读取（compose 自动加载，缺失时用默认值兜底）
       MYSQL_PASSWORD: ${MYSQL_PASSWORD:-password}
       REDIS_PASSWORD: ${REDIS_PASSWORD:-}
     ports:
-      - "8080:8080"
+      # 宿主映射端口可配（.env 中 SERVER_PORT，默认 8080）；容器内固定 8080
+      - "${SERVER_PORT:-8080}:8080"
     volumes:
       - ./logs:/app/logs
       - ./uploadPath:/app/uploadPath

@@ -15,8 +15,8 @@ ruoyi:
 
 # 开发环境配置
 server:
-  # 服务器的HTTP端口，默认为8080
-  port: 8080
+  # 服务器的HTTP端口（可用环境变量 SERVER_PORT 覆盖）
+  port: ${SERVER_PORT:8080}
   servlet:
     # 应用的访问路径
     context-path: /
@@ -92,8 +92,8 @@ spring:
 token:
   # 令牌自定义标识
   header: Authorization
-  # 令牌密钥
-  secret: abcdefghijklmnopqrstuvwxyz
+  # 令牌密钥（生产环境务必通过环境变量 TOKEN_SECRET 覆盖）
+  secret: ${TOKEN_SECRET:abcdefghijklmnopqrstuvwxyz}
   # 令牌有效期（默认30分钟）
   expireTime: 30
 
@@ -114,8 +114,8 @@ pagehelper:
 
 # Swagger配置
 swagger:
-  # 是否开启swagger
-  enabled: true
+  # 是否开启swagger（可用环境变量 SWAGGER_ENABLED 覆盖）
+  enabled: ${SWAGGER_ENABLED:true}
   # 请求前缀
   pathMapping: /dev-api
 

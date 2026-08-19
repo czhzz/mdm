@@ -6,7 +6,7 @@ spring:
         druid:
             # 主库数据源
             master:
-                url: jdbc:mysql://${MYSQL_HOST:localhost}:${MYSQL_PORT:3306}/mdm?useUnicode=true&characterEncoding=utf8&zeroDateTimeBehavior=convertToNull&useSSL=true&serverTimezone=GMT%2B8
+                url: jdbc:mysql://${MYSQL_HOST:localhost}:${MYSQL_PORT:3306}/${MYSQL_DATABASE:mdm}?useUnicode=true&characterEncoding=utf8&zeroDateTimeBehavior=convertToNull&useSSL=true&serverTimezone=GMT%2B8
                 username: ${MYSQL_USERNAME:root}
                 password: ${MYSQL_PASSWORD:password}
             # 从库数据源
@@ -39,19 +39,20 @@ spring:
             testWhileIdle: true
             testOnBorrow: false
             testOnReturn: false
-            webStatFilter: 
-                enabled: true
+            webStatFilter:
+                # Druid 监控总开关（可用环境变量 DRUID_MONITOR_ENABLED 覆盖）
+                enabled: ${DRUID_MONITOR_ENABLED:true}
             statViewServlet:
-                enabled: true
+                enabled: ${DRUID_MONITOR_ENABLED:true}
                 # 设置白名单，不填则允许所有访问
                 allow:
                 url-pattern: /druid/*
-                # 控制台管理用户名和密码
-                login-username: ruoyi
-                login-password: 123456
+                # 控制台管理用户名和密码（可用环境变量覆盖）
+                login-username: ${DRUID_USERNAME:ruoyi}
+                login-password: ${DRUID_PASSWORD:123456}
             filter:
                 stat:
-                    enabled: true
+                    enabled: ${DRUID_MONITOR_ENABLED:true}
                     # 慢SQL记录
                     log-slow-sql: true
                     slow-sql-millis: 1000
