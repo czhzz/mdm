@@ -42,6 +42,11 @@ public class MdmAttributeServiceImpl implements IMdmAttributeService
     @Override
     public int insertAttribute(MdmAttribute mdmAttribute)
     {
+        // 属性编码白名单（用于动态 SQL 列名拼接，防止注入）
+        if (!mdmAttribute.getAttrCode().matches("^[a-zA-Z_][a-zA-Z0-9_]{0,49}$"))
+        {
+            throw new ServiceException("属性编码仅支持字母、数字、下划线且以字母开头");
+        }
         mdmAttribute.setCreateBy(SecurityUtils.getUsername());
         return attributeMapper.insertAttribute(mdmAttribute);
     }

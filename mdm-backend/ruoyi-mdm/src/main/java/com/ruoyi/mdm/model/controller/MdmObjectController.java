@@ -1,4 +1,4 @@
-package com.ruoyi.web.controller.mdm;
+package com.ruoyi.mdm.model.controller;
 
 import java.util.HashMap;
 import java.util.List;

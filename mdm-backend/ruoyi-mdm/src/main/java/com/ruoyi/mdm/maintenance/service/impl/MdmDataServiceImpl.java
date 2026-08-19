@@ -1,6 +1,8 @@
 package com.ruoyi.mdm.maintenance.service.impl;
 
+import java.math.BigDecimal;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -77,6 +79,7 @@ public class MdmDataServiceImpl implements IMdmDataService
     public int insertData(String objectCode, Map<String, Object> data)
     {
         MdmTable table = resolveTable(objectCode);
+        validateData(table, data, null);
         List<String> cols = new ArrayList<>();
         List<Object> vals = new ArrayList<>();
         for (Map.Entry<String, Object> e : data.entrySet())
@@ -104,6 +107,7 @@ public class MdmDataServiceImpl implements IMdmDataService
     public int updateData(String objectCode, Long id, Map<String, Object> data)
     {
         MdmTable table = resolveTable(objectCode);
+        validateData(table, data, id);
         List<String> sets = new ArrayList<>();
         List<Object> vals = new ArrayList<>();
         for (Map.Entry<String, Object> e : data.entrySet())
@@ -139,6 +143,19 @@ public class MdmDataServiceImpl implements IMdmDataService
         return jdbcTemplate.update(sql.toString(), (Object[]) ids);
     }
 
+    @Override
+    public int updateDataStatus(String objectCode, Long id, String status)
+    {
+        MdmTable table = resolveTable(objectCode);
+        if (!"1".equals(status) && !"2".equals(status))
+        {
+            throw new ServiceException("不支持的目标状态：" + status);
+        }
+        return jdbcTemplate.update("UPDATE " + table.tableName
+                        + " SET status = ?, update_by = ?, update_time = sysdate() WHERE id = ?",
+                status, SecurityUtils.getUsername(), id);
+    }
+
     /**
      * 解析对象数据表结构：校验对象存在且已发布、编码白名单，返回表名与合法列集合
      */
@@ -160,16 +177,22 @@ public class MdmDataServiceImpl implements IMdmDataService
         String tableName = "mdm_data_" + objectCode;
         MdmAttribute query = new MdmAttribute();
         query.setObjectId(object.getObjectId());
+        List<MdmAttribute> attrs = attributeMapper.selectAttributeList(query);
         Set<String> columns = new LinkedHashSet<>();
         for (String col : BASE_COLUMNS)
         {
             columns.add(col);
         }
-        for (MdmAttribute attr : attributeMapper.selectAttributeList(query))
+        for (MdmAttribute attr : attrs)
         {
+            // 防御性白名单校验（列名拼接 SQL 前的最后一道关卡）
+            if (!isValidIdentifier(attr.getAttrCode()))
+            {
+                throw new ServiceException("属性编码包含非法字符：" + attr.getAttrCode());
+            }
             columns.add(attr.getAttrCode());
         }
-        return new MdmTable(tableName, columns);
+        return new MdmTable(tableName, columns, attrs);
     }
 
     /**
@@ -209,16 +232,88 @@ public class MdmDataServiceImpl implements IMdmDataService
         return list;
     }
 
-    /** 动态表结构：表名 + 合法列集合 */
+    /**
+     * 服务端校验：必填 / 唯一 / 枚举 / 数值范围
+     */
+    private void validateData(MdmTable table, Map<String, Object> data, Long excludeId)
+    {
+        for (MdmAttribute attr : table.attributes)
+        {
+            String key = attr.getAttrCode();
+            Object val = data.get(key);
+            String strVal = val == null ? null : String.valueOf(val).trim();
+            // 必填
+            if ("Y".equals(attr.getRequiredFlag()) && StringUtils.isEmpty(strVal))
+            {
+                throw new ServiceException("属性【" + attr.getAttrName() + "】不能为空");
+            }
+            if (StringUtils.isEmpty(strVal))
+            {
+                continue;
+            }
+            // 唯一（排除自身）
+            if ("Y".equals(attr.getUniqueFlag()) && existsValue(table.tableName, key, strVal, excludeId))
+            {
+                throw new ServiceException("属性【" + attr.getAttrName() + "】值已存在：" + strVal);
+            }
+            // 枚举
+            if ("enum".equals(attr.getSourceType()) && StringUtils.isNotEmpty(attr.getEnumValues())
+                    && !Arrays.asList(attr.getEnumValues().split(",")).contains(strVal))
+            {
+                throw new ServiceException("属性【" + attr.getAttrName() + "】值不在枚举范围内");
+            }
+            // 数值范围
+            if ("range".equals(attr.getSourceType()) && StringUtils.isNotEmpty(attr.getMinValue() + attr.getMaxValue()))
+            {
+                try
+                {
+                    BigDecimal v = new BigDecimal(strVal);
+                    if (StringUtils.isNotEmpty(attr.getMinValue()) && v.compareTo(new BigDecimal(attr.getMinValue())) < 0)
+                    {
+                        throw new ServiceException("属性【" + attr.getAttrName() + "】不能小于最小值");
+                    }
+                    if (StringUtils.isNotEmpty(attr.getMaxValue()) && v.compareTo(new BigDecimal(attr.getMaxValue())) > 0)
+                    {
+                        throw new ServiceException("属性【" + attr.getAttrName() + "】不能大于最大值");
+                    }
+                }
+                catch (NumberFormatException e)
+                {
+                    throw new ServiceException("属性【" + attr.getAttrName() + "】必须为数字");
+                }
+            }
+        }
+    }
+
+    /**
+     * 校验属性值是否已存在（排除指定 id）
+     */
+    private boolean existsValue(String tableName, String column, String value, Long excludeId)
+    {
+        String sql = "SELECT COUNT(1) FROM " + tableName + " WHERE " + column + " = ?";
+        List<Object> args = new ArrayList<>();
+        args.add(value);
+        if (excludeId != null)
+        {
+            sql += " AND id != ?";
+            args.add(excludeId);
+        }
+        Long count = jdbcTemplate.queryForObject(sql, Long.class, args.toArray());
+        return count != null && count > 0;
+    }
+
+    /** 动态表结构：表名 + 合法列集合 + 属性元数据 */
     private static class MdmTable
     {
         final String tableName;
         final Set<String> columns;
+        final List<MdmAttribute> attributes;
 
-        MdmTable(String tableName, Set<String> columns)
+        MdmTable(String tableName, Set<String> columns, List<MdmAttribute> attributes)
         {
             this.tableName = tableName;
             this.columns = columns;
+            this.attributes = attributes;
         }
     }
 }

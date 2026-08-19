@@ -1,4 +1,4 @@
-package com.ruoyi.web.controller.mdm;
+package com.ruoyi.mdm.model.controller;
 
 import java.util.List;
 import org.springframework.beans.factory.annotation.Autowired;

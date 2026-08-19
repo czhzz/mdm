@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.mdm.coderule.mapper.MdmCodeRuleSegmentMapper">
+
+    <resultMap type="MdmCodeRuleSegment" id="MdmCodeRuleSegmentResult">
+        <id     property="segmentId"   column="segment_id"   />
+        <result property="ruleId"      column="rule_id"      />
+        <result property="segType"     column="seg_type"     />
+        <result property="segValue"    column="seg_value"    />
+        <result property="orderNum"    column="order_num"    />
+    </resultMap>
+
+    <select id="selectSegmentsByRuleId" parameterType="Long" resultMap="MdmCodeRuleSegmentResult">
+        select segment_id, rule_id, seg_type, seg_value, order_num
+        from mdm_code_rule_segment
+        where rule_id = #{ruleId}
+        order by order_num
+    </select>
+
+    <insert id="insertSegment" parameterType="MdmCodeRuleSegment" useGeneratedKeys="true" keyProperty="segmentId">
+        insert into mdm_code_rule_segment (
+            <if test="segValue != null">seg_value,</if>
+            <if test="orderNum != null">order_num,</if>
+            rule_id, seg_type
+        )values(
+            <if test="segValue != null">#{segValue},</if>
+            <if test="orderNum != null">#{orderNum},</if>
+            #{ruleId}, #{segType}
+        )
+    </insert>
+
+    <delete id="deleteSegmentByRuleId" parameterType="Long">
+        delete from mdm_code_rule_segment where rule_id = #{ruleId}
+    </delete>
+
+</mapper>

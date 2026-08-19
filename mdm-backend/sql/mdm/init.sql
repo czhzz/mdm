@@ -79,11 +79,42 @@ create table mdm_attribute (
 ) engine=innodb auto_increment=1 comment = '主数据属性表';
 
 -- ----------------------------
+-- 3.1 主数据编码规则表
+-- ----------------------------
+drop table if exists mdm_code_rule_segment;
+drop table if exists mdm_code_rule;
+create table mdm_code_rule (
+  rule_id      bigint(20)      not null auto_increment    comment '规则ID',
+  object_id    bigint(20)      not null                   comment '对象ID',
+  rule_name    varchar(100)    not null                   comment '规则名称',
+  reset_type   varchar(10)     default 'NONE'             comment '流水重置周期（NONE/DAY/MONTH/YEAR）',
+  status       char(1)         default '0'                comment '状态（0正常 1停用）',
+  create_by    varchar(64)     default ''                 comment '创建者',
+  create_time  datetime                                   comment '创建时间',
+  update_by    varchar(64)     default ''                 comment '更新者',
+  update_time  datetime                                   comment '更新时间',
+  remark       varchar(500)    default null               comment '备注',
+  primary key (rule_id),
+  unique key uk_object_rule (object_id)
+) engine=innodb auto_increment=1 comment = '主数据编码规则表';
+
+drop table if exists mdm_code_rule_segment;
+create table mdm_code_rule_segment (
+  segment_id   bigint(20)      not null auto_increment    comment '分段ID',
+  rule_id      bigint(20)      not null                   comment '规则ID',
+  seg_type     varchar(10)     not null                   comment '分段类型（CONSTANT常量/DATE日期/SEQUENCE流水/ATTRIBUTE属性值）',
+  seg_value    varchar(100)    default ''                 comment '分段值（常量值/日期格式/流水位数/属性编码）',
+  order_num    int(4)          default 0                  comment '显示顺序',
+  primary key (segment_id),
+  key idx_rule_id (rule_id)
+) engine=innodb auto_increment=1 comment = '主数据编码规则分段表';
+
+-- ----------------------------
 -- 4. 菜单与权限
 -- ----------------------------
 -- 清理已存在的 mdm 菜单（保证脚本可重复执行）
-delete from sys_role_menu where menu_id between 2000 and 2022;
-delete from sys_menu where menu_id between 2000 and 2022;
+delete from sys_role_menu where menu_id between 2000 and 2026;
+delete from sys_menu where menu_id between 2000 and 2026;
 -- 一级目录
 insert into sys_menu values('2000', '主数据管理', '0', '10', 'mdm',            null,                    '', '', 1, 0, 'M', '0', '0', '',                    'tree-table', 'admin', sysdate(), '', null, '主数据管理目录');
 -- 二级菜单
@@ -111,6 +142,11 @@ insert into sys_menu values('2019', '数据查询', '2004', '1', '', null, '', '
 insert into sys_menu values('2020', '数据新增', '2004', '2', '', null, '', '', 1, 0, 'F', '0', '0', 'mdm:maintenance:add',   '#', 'admin', sysdate(), '', null, '');
 insert into sys_menu values('2021', '数据修改', '2004', '3', '', null, '', '', 1, 0, 'F', '0', '0', 'mdm:maintenance:edit',  '#', 'admin', sysdate(), '', null, '');
 insert into sys_menu values('2022', '数据删除', '2004', '4', '', null, '', '', 1, 0, 'F', '0', '0', 'mdm:maintenance:remove','#', 'admin', sysdate(), '', null, '');
+-- 编码规则按钮权限
+insert into sys_menu values('2023', '规则查询', '2002', '1', '', null, '', '', 1, 0, 'F', '0', '0', 'mdm:coderule:query', '#', 'admin', sysdate(), '', null, '');
+insert into sys_menu values('2024', '规则新增', '2002', '2', '', null, '', '', 1, 0, 'F', '0', '0', 'mdm:coderule:add',   '#', 'admin', sysdate(), '', null, '');
+insert into sys_menu values('2025', '规则修改', '2002', '3', '', null, '', '', 1, 0, 'F', '0', '0', 'mdm:coderule:edit',  '#', 'admin', sysdate(), '', null, '');
+insert into sys_menu values('2026', '规则删除', '2002', '4', '', null, '', '', 1, 0, 'F', '0', '0', 'mdm:coderule:remove','#', 'admin', sysdate(), '', null, '');
 
 -- ----------------------------
 -- 5. 种子字典

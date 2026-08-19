@@ -66,4 +66,14 @@ public interface IMdmDataService
      * @return 结果
      */
     public int deleteDataByIds(String objectCode, Long[] ids);
+
+    /**
+     * 更新主数据生命周期状态（0草稿 → 1已生效 → 2已停用）
+     *
+     * @param objectCode 对象编码
+     * @param id 数据ID
+     * @param status 目标状态（1已生效 2已停用）
+     * @return 结果
+     */
+    public int updateDataStatus(String objectCode, Long id, String status);
 }

@@ -1,4 +1,4 @@
-package com.ruoyi.web.controller.mdm;
+package com.ruoyi.mdm.maintenance.controller;
 
 import java.util.HashMap;
 import java.util.List;
@@ -96,5 +96,17 @@ public class MdmDataController extends BaseController
     public AjaxResult remove(@PathVariable String objectCode, @PathVariable Long[] ids)
     {
         return toAjax(dataService.deleteDataByIds(objectCode, ids));
+    }
+
+    /**
+     * 更新主数据生命周期状态（生效/停用）
+     */
+    @PreAuthorize("@ss.hasPermi('mdm:maintenance:edit')")
+    @Log(title = "主数据状态", businessType = BusinessType.UPDATE)
+    @PutMapping("/{objectCode}/{id}/status")
+    public AjaxResult updateStatus(@PathVariable String objectCode, @PathVariable Long id, @RequestBody Map<String, Object> body)
+    {
+        String status = String.valueOf(body.getOrDefault("status", ""));
+        return toAjax(dataService.updateDataStatus(objectCode, id, status));
     }
 }
