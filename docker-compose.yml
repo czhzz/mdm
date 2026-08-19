@@ -3,7 +3,7 @@ services:
     image: mysql:8.0
     container_name: mdm-mysql
     environment:
-      MYSQL_ROOT_PASSWORD: password
+      MYSQL_ROOT_PASSWORD: ${MYSQL_PASSWORD:-password}
       MYSQL_DATABASE: mdm
     command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
     ports:
@@ -23,12 +23,16 @@ services:
   redis:
     image: redis:7-alpine
     container_name: mdm-redis
+    # 默认无密码；.env 配置 REDIS_PASSWORD 后自动启用密码（与 backend 同源，保持一致）
+    command: ["redis-server", "--requirepass", "${REDIS_PASSWORD:-}"]
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-}
     ports:
       - "6379:6379"
     volumes:
       - redis-data:/data
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: ["CMD-SHELL", "redis-cli -a \"$$REDIS_PASSWORD\" --no-auth-warning ping | grep PONG"]
       interval: 5s
       timeout: 5s
       retries: 10
@@ -37,12 +41,15 @@ services:
     build: ./mdm-backend
     container_name: mdm-backend
     environment:
+      # 主机名/端口/用户名固定（容器内网恒定值，不读 .env）
       MYSQL_HOST: mysql
-      MYSQL_PORT: "3306"
+      MYSQL_PORT: 3306
       MYSQL_USERNAME: root
-      MYSQL_PASSWORD: password
       REDIS_HOST: redis
-      REDIS_PORT: "6379"
+      REDIS_PORT: 6379
+      # 仅密码从项目根 .env 读取（compose 自动加载，缺失时用默认值兜底）
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-password}
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-}
     ports:
       - "8080:8080"
     volumes:
