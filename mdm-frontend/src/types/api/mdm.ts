@@ -51,3 +51,23 @@ export interface MdmObjectMeta {
   object: MdmObject
   attributes: MdmAttribute[]
 }
+
+/** 主数据编码规则 */
+export interface MdmCodeRule {
+  ruleId?: number
+  objectId?: number
+  ruleName?: string
+  resetType?: string
+  codeField?: string
+  status?: string
+  segments?: MdmCodeRuleSegment[]
+}
+
+/** 主数据编码规则分段 */
+export interface MdmCodeRuleSegment {
+  segmentId?: number
+  ruleId?: number
+  segType?: string
+  segValue?: string
+  orderNum?: number
+}

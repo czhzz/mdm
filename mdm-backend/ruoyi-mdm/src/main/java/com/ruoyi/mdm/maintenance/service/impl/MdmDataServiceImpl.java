@@ -13,6 +13,8 @@ import org.springframework.stereotype.Service;
 import com.ruoyi.common.exception.ServiceException;
 import com.ruoyi.common.utils.SecurityUtils;
 import com.ruoyi.common.utils.StringUtils;
+import com.ruoyi.mdm.coderule.domain.MdmCodeRule;
+import com.ruoyi.mdm.coderule.service.IMdmCodeRuleService;
 import com.ruoyi.mdm.maintenance.service.IMdmDataService;
 import com.ruoyi.mdm.model.domain.MdmAttribute;
 import com.ruoyi.mdm.model.domain.MdmObject;
@@ -41,6 +43,9 @@ public class MdmDataServiceImpl implements IMdmDataService
 
     @Autowired
     private JdbcTemplate jdbcTemplate;
+
+    @Autowired
+    private IMdmCodeRuleService codeRuleService;
 
     @Override
     public List<Map<String, Object>> selectDataList(String objectCode, Map<String, Object> query, int pageNum, int pageSize)
@@ -80,6 +85,17 @@ public class MdmDataServiceImpl implements IMdmDataService
     {
         MdmTable table = resolveTable(objectCode);
         validateData(table, data, null);
+        // 按编码方案自动生成编码并回填到编码字段
+        MdmObject object = objectMapper.checkObjectCodeUnique(objectCode);
+        if (StringUtils.isNotNull(object))
+        {
+            MdmCodeRule rule = codeRuleService.selectRuleByObjectId(object.getObjectId());
+            if (StringUtils.isNotNull(rule) && StringUtils.isNotEmpty(rule.getCodeField())
+                    && table.columns.contains(rule.getCodeField()))
+            {
+                data.put(rule.getCodeField(), codeRuleService.generateCode(rule, data));
+            }
+        }
         List<String> cols = new ArrayList<>();
         List<Object> vals = new ArrayList<>();
         for (Map.Entry<String, Object> e : data.entrySet())
@@ -262,6 +278,12 @@ public class MdmDataServiceImpl implements IMdmDataService
             {
                 throw new ServiceException("属性【" + attr.getAttrName() + "】值不在枚举范围内");
             }
+            // 字典值（标准字典 = 若依 sys_dict_data）
+            if ("dict".equals(attr.getSourceType()) && StringUtils.isNotEmpty(attr.getDictType())
+                    && !dictDataExists(attr.getDictType(), strVal))
+            {
+                throw new ServiceException("属性【" + attr.getAttrName() + "】值不在标准字典中：" + strVal);
+            }
             // 数值范围
             if ("range".equals(attr.getSourceType()) && StringUtils.isNotEmpty(attr.getMinValue() + attr.getMaxValue()))
             {
@@ -299,6 +321,17 @@ public class MdmDataServiceImpl implements IMdmDataService
             args.add(excludeId);
         }
         Long count = jdbcTemplate.queryForObject(sql, Long.class, args.toArray());
+        return count != null && count > 0;
+    }
+
+    /**
+     * 校验字典值是否存在于标准字典（sys_dict_data）
+     */
+    private boolean dictDataExists(String dictType, String value)
+    {
+        Integer count = jdbcTemplate.queryForObject(
+                "SELECT COUNT(1) FROM sys_dict_data WHERE dict_type = ? AND dict_value = ? AND status = '0'",
+                Integer.class, dictType, value);
         return count != null && count > 0;
     }
 

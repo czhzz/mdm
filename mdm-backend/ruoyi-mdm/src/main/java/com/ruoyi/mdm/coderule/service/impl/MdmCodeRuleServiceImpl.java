@@ -3,10 +3,13 @@ package com.ruoyi.mdm.coderule.service.impl;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.TimeUnit;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import com.ruoyi.common.constant.UserConstants;
+import com.ruoyi.common.core.redis.RedisCache;
 import com.ruoyi.common.exception.ServiceException;
 import com.ruoyi.common.utils.SecurityUtils;
 import com.ruoyi.common.utils.StringUtils;
@@ -30,10 +33,19 @@ public class MdmCodeRuleServiceImpl implements IMdmCodeRuleService
     @Autowired
     private MdmCodeRuleSegmentMapper segmentMapper;
 
+    @Autowired
+    private RedisCache redisCache;
+
     @Override
     public MdmCodeRule selectRuleById(Long ruleId)
     {
         return ruleMapper.selectRuleById(ruleId);
+    }
+
+    @Override
+    public MdmCodeRule selectRuleByObjectId(Long objectId)
+    {
+        return ruleMapper.selectRuleByObjectId(objectId);
     }
 
     @Override
@@ -143,5 +155,98 @@ public class MdmCodeRuleServiceImpl implements IMdmCodeRuleService
                 segmentMapper.insertSegment(seg);
             }
         }
+    }
+
+    @Override
+    public String generateCode(MdmCodeRule mdmCodeRule, Map<String, Object> data)
+    {
+        StringBuilder sb = new StringBuilder();
+        if (mdmCodeRule.getSegments() == null)
+        {
+            return sb.toString();
+        }
+        for (MdmCodeRuleSegment seg : mdmCodeRule.getSegments())
+        {
+            if ("CONSTANT".equals(seg.getSegType()))
+            {
+                sb.append(seg.getSegValue());
+            }
+            else if ("DATE".equals(seg.getSegType()))
+            {
+                String fmt = StringUtils.isNotEmpty(seg.getSegValue()) ? seg.getSegValue() : "yyyyMMdd";
+                try
+                {
+                    sb.append(new SimpleDateFormat(fmt).format(new Date()));
+                }
+                catch (IllegalArgumentException e)
+                {
+                    throw new ServiceException("日期格式不合法：" + seg.getSegValue());
+                }
+            }
+            else if ("SEQUENCE".equals(seg.getSegType()))
+            {
+                sb.append(sequence(mdmCodeRule, seg));
+            }
+            else if ("ATTRIBUTE".equals(seg.getSegType()))
+            {
+                Object v = data == null ? null : data.get(seg.getSegValue());
+                if (v == null)
+                {
+                    throw new ServiceException("编码段缺少属性值：" + seg.getSegValue());
+                }
+                sb.append(v);
+            }
+        }
+        return sb.toString();
+    }
+
+    /**
+     * 流水号：Redis INCR 原子递增，key 含周期前缀实现按日/月/年重置
+     */
+    private String sequence(MdmCodeRule rule, MdmCodeRuleSegment seg)
+    {
+        int len = 4;
+        try
+        {
+            len = Integer.parseInt(seg.getSegValue());
+        }
+        catch (NumberFormatException ignored)
+        {
+        }
+        String period = "";
+        String resetType = StringUtils.isNotEmpty(rule.getResetType()) ? rule.getResetType() : "NONE";
+        if ("DAY".equals(resetType))
+        {
+            period = new SimpleDateFormat("yyyyMMdd").format(new Date());
+        }
+        else if ("MONTH".equals(resetType))
+        {
+            period = new SimpleDateFormat("yyyyMM").format(new Date());
+        }
+        else if ("YEAR".equals(resetType))
+        {
+            period = new SimpleDateFormat("yyyy").format(new Date());
+        }
+        String key = "mdm:code:" + rule.getObjectId() + ":" + period;
+        Long seq = redisCache.increment(key, 1);
+        // 周期键设置过期时间（NONE 不过期），避免 key 无限累积
+        if ("DAY".equals(resetType))
+        {
+            redisCache.expire(key, 2, TimeUnit.DAYS);
+        }
+        else if ("MONTH".equals(resetType))
+        {
+            redisCache.expire(key, 60, TimeUnit.DAYS);
+        }
+        else if ("YEAR".equals(resetType))
+        {
+            redisCache.expire(key, 730, TimeUnit.DAYS);
+        }
+        String seqStr = String.valueOf(seq);
+        if (seqStr.length() > len)
+        {
+            throw new ServiceException("流水号已超出 " + len + " 位上限");
+        }
+        return String.format("%0" + len + "d", seq);
     }
 }

@@ -1,6 +1,7 @@
 package com.ruoyi.mdm.coderule.service;
 
 import java.util.List;
+import java.util.Map;
 import com.ruoyi.mdm.coderule.domain.MdmCodeRule;
 
 /**
@@ -25,6 +26,14 @@ public interface IMdmCodeRuleService
      * @return 编码规则集合
      */
     public List<MdmCodeRule> selectRuleList(MdmCodeRule mdmCodeRule);
+
+    /**
+     * 按对象查询编码规则（一个对象最多一个方案）
+     *
+     * @param objectId 对象ID
+     * @return 编码规则
+     */
+    public MdmCodeRule selectRuleByObjectId(Long objectId);
 
     /**
      * 新增编码规则（含分段）
@@ -65,4 +74,13 @@ public interface IMdmCodeRuleService
      * @return 示例编码
      */
     public String previewCode(MdmCodeRule mdmCodeRule);
+
+    /**
+     * 生成编码（流水段基于 Redis INCR，按周期重置）
+     *
+     * @param mdmCodeRule 编码规则（含分段）
+     * @param data 数据（ATTRIBUTE 段取值）
+     * @return 生成的编码
+     */
+    public String generateCode(MdmCodeRule mdmCodeRule, Map<String, Object> data);
 }

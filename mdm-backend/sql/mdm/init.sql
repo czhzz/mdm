@@ -88,6 +88,7 @@ create table mdm_code_rule (
   object_id    bigint(20)      not null                   comment '对象ID',
   rule_name    varchar(100)    not null                   comment '规则名称',
   reset_type   varchar(10)     default 'NONE'             comment '流水重置周期（NONE/DAY/MONTH/YEAR）',
+  code_field   varchar(50)     default null               comment '编码回填字段（对象属性编码）',
   status       char(1)         default '0'                comment '状态（0正常 1停用）',
   create_by    varchar(64)     default ''                 comment '创建者',
   create_time  datetime                                   comment '创建时间',

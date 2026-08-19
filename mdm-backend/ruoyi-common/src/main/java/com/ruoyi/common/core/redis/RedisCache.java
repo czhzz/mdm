@@ -75,6 +75,18 @@ public class RedisCache
     }
 
     /**
+     * 递增
+     *
+     * @param key 键
+     * @param delta 要增加几(大于0)
+     * @return 递增后的值
+     */
+    public Long increment(final String key, final long delta)
+    {
+        return redisTemplate.opsForValue().increment(key, delta);
+    }
+
+    /**
      * 获取有效时间
      *
      * @param key Redis键

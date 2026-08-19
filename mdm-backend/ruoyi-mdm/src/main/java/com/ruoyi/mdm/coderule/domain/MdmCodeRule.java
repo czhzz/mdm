@@ -31,6 +31,10 @@ public class MdmCodeRule extends BaseEntity
     @Excel(name = "流水重置周期", readConverterExp = "NONE=不重置,DAY=按日,MONTH=按月,YEAR=按年")
     private String resetType;
 
+    /** 编码回填字段（对象属性编码） */
+    @Excel(name = "编码回填字段")
+    private String codeField;
+
     /** 状态（0正常 1停用） */
     private String status;
 
@@ -79,6 +83,16 @@ public class MdmCodeRule extends BaseEntity
         this.resetType = resetType;
     }
 
+    public String getCodeField()
+    {
+        return codeField;
+    }
+
+    public void setCodeField(String codeField)
+    {
+        this.codeField = codeField;
+    }
+
     public String getStatus()
     {
         return status;
@@ -106,6 +120,7 @@ public class MdmCodeRule extends BaseEntity
             .append("objectId", getObjectId())
             .append("ruleName", getRuleName())
             .append("resetType", getResetType())
+            .append("codeField", getCodeField())
             .append("status", getStatus())
             .append("createBy", getCreateBy())
             .append("createTime", getCreateTime())
