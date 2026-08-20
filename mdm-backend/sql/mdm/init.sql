@@ -163,3 +163,66 @@ insert into sys_dict_data values(2003, 4, '日期时间', 'datetime', 'mdm_data_
 insert into sys_dict_data values(2004, 5, '字典',   'dict',     'mdm_data_type', '', 'default', 'N', '0', 'admin', sysdate(), 'admin', sysdate(), null);
 insert into sys_dict_data values(2005, 6, '枚举',   'enum',     'mdm_data_type', '', 'default', 'N', '0', 'admin', sysdate(), 'admin', sysdate(), null);
 insert into sys_dict_data values(2006, 7, '布尔',   'boolean',  'mdm_data_type', '', 'default', 'N', '0', 'admin', sysdate(), 'admin', sysdate(), null);
+
+-- ----------------------------
+-- 3.2 数据质量校验规则表
+-- ----------------------------
+drop table if exists mdm_quality_rule;
+create table mdm_quality_rule (
+  rule_id      bigint(20)      not null auto_increment    comment '规则ID',
+  object_id    bigint(20)      not null                   comment '对象ID',
+  target_type  varchar(10)     not null default 'ATTRIBUTE' comment '作用目标（OBJECT对象级/ATTRIBUTE属性级）',
+  target_value varchar(50)     default null               comment '目标属性编码（属性级时必填）',
+  rule_type    varchar(10)     not null                   comment '规则类型（REQUIRED必填/REGEX正则/UNIQUE唯一/RANGE范围）',
+  rule_name    varchar(100)    default null               comment '规则名称',
+  rule_expr    varchar(500)    default null               comment '规则表达式（正则/范围等）',
+  rule_msg     varchar(200)    default null               comment '违规提示信息',
+  status       char(1)         default '0'                comment '状态（0启用 1停用）',
+  create_by    varchar(64)     default ''                 comment '创建者',
+  create_time  datetime                                   comment '创建时间',
+  update_by    varchar(64)     default ''                 comment '更新者',
+  update_time  datetime                                   comment '更新时间',
+  remark       varchar(500)    default null               comment '备注',
+  primary key (rule_id),
+  key idx_object_id (object_id)
+) engine=innodb auto_increment=1 comment = '数据质量校验规则表';
+
+-- ----------------------------
+-- 3.3 数据质量台账表
+-- ----------------------------
+drop table if exists mdm_quality_issue;
+create table mdm_quality_issue (
+  issue_id     bigint(20)      not null auto_increment    comment '问题ID',
+  object_id    bigint(20)      not null                   comment '对象ID',
+  data_id      bigint(20)      not null                   comment '数据ID',
+  issue_type   varchar(20)     not null                   comment '问题类型（VALIDATE校验失败/DUPLICATE重复/MISSING缺失）',
+  issue_desc   varchar(500)    default null               comment '问题描述',
+  handle_status char(1)        default '0'                comment '处理状态（0未处理 1已处理 2忽略）',
+  handle_by    varchar(64)     default null               comment '处理人',
+  handle_time  datetime                                   comment '处理时间',
+  create_by    varchar(64)     default ''                 comment '创建者',
+  create_time  datetime                                   comment '创建时间',
+  update_by    varchar(64)     default ''                 comment '更新者',
+  update_time  datetime                                   comment '更新时间',
+  remark       varchar(500)    default null               comment '备注',
+  primary key (issue_id),
+  key idx_object_data (object_id, data_id)
+) engine=innodb auto_increment=1 comment = '数据质量台账表';
+
+-- ----------------------------
+-- 3.4 审核流程配置表
+-- ----------------------------
+drop table if exists mdm_audit_flow;
+create table mdm_audit_flow (
+  flow_id      bigint(20)      not null auto_increment    comment '流程ID',
+  object_id    bigint(20)      not null                   comment '对象ID',
+  enabled      char(1)         default '0'                comment '是否启用（0禁用 1启用）',
+  audit_role   varchar(100)    default null               comment '审核角色标识',
+  create_by    varchar(64)     default ''                 comment '创建者',
+  create_time  datetime                                   comment '创建时间',
+  update_by    varchar(64)     default ''                 comment '更新者',
+  update_time  datetime                                   comment '更新时间',
+  remark       varchar(500)    default null               comment '备注',
+  primary key (flow_id),
+  unique key uk_object_flow (object_id)
+) engine=innodb auto_increment=1 comment = '主数据审核流程配置表';

@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.mdm.quality.mapper.MdmQualityRuleMapper">
+
+    <resultMap type="MdmQualityRule" id="MdmQualityRuleResult">
+        <id     property="ruleId"      column="rule_id"       />
+        <result property="objectId"    column="object_id"     />
+        <result property="targetType"  column="target_type"   />
+        <result property="targetValue" column="target_value"  />
+        <result property="ruleType"    column="rule_type"     />
+        <result property="ruleName"    column="rule_name"     />
+        <result property="ruleExpr"    column="rule_expr"     />
+        <result property="ruleMsg"     column="rule_msg"      />
+        <result property="status"      column="status"        />
+        <result property="createBy"    column="create_by"     />
+        <result property="createTime"  column="create_time"   />
+        <result property="updateBy"    column="update_by"     />
+        <result property="updateTime"  column="update_time"   />
+        <result property="remark"      column="remark"        />
+    </resultMap>
+
+    <sql id="selectRuleVo">
+        select rule_id, object_id, target_type, target_value, rule_type, rule_name, rule_expr, rule_msg,
+               status, create_by, create_time, update_by, update_time, remark
+        from mdm_quality_rule
+    </sql>
+
+    <select id="selectRuleById" parameterType="Long" resultMap="MdmQualityRuleResult">
+        <include refid="selectRuleVo"/>
+        where rule_id = #{ruleId}
+    </select>
+
+    <select id="selectRuleList" parameterType="MdmQualityRule" resultMap="MdmQualityRuleResult">
+        <include refid="selectRuleVo"/>
+        <where>
+            <if test="objectId != null">and object_id = #{objectId}</if>
+            <if test="targetType != null and targetType != ''">and target_type = #{targetType}</if>
+            <if test="ruleType != null and ruleType != ''">and rule_type = #{ruleType}</if>
+            <if test="ruleName != null and ruleName != ''">and rule_name like concat('%', #{ruleName}, '%')</if>
+            <if test="status != null and status != ''">and status = #{status}</if>
+        </where>
+        order by rule_id
+    </select>
+
+    <insert id="insertRule" parameterType="MdmQualityRule" useGeneratedKeys="true" keyProperty="ruleId">
+        insert into mdm_quality_rule (
+            object_id, target_type,
+            <if test="targetValue != null and targetValue != ''">target_value,</if>
+            rule_type, rule_name,
+            <if test="ruleExpr != null and ruleExpr != ''">rule_expr,</if>
+            <if test="ruleMsg != null and ruleMsg != ''">rule_msg,</if>
+            <if test="status != null and status != ''">status,</if>
+            <if test="createBy != null and createBy != ''">create_by,</if>
+            <if test="createTime != null">create_time,</if>
+            <if test="remark != null">remark,</if>
+            update_by, update_time
+        )values(
+            #{objectId}, #{targetType},
+            <if test="targetValue != null and targetValue != ''">#{targetValue},</if>
+            #{ruleType}, #{ruleName},
+            <if test="ruleExpr != null and ruleExpr != ''">#{ruleExpr},</if>
+            <if test="ruleMsg != null and ruleMsg != ''">#{ruleMsg},</if>
+            <if test="status != null and status != ''">#{status},</if>
+            <if test="createBy != null and createBy != ''">#{createBy},</if>
+            <if test="createTime != null">#{createTime},</if>
+            <if test="remark != null">#{remark},</if>
+            #{updateBy}, sysdate()
+        )
+    </insert>
+
+    <update id="updateRule" parameterType="MdmQualityRule">
+        update mdm_quality_rule
+        <set>
+            <if test="targetType != null and targetType != ''">target_type = #{targetType},</if>
+            <if test="targetValue != null">target_value = #{targetValue},</if>
+            <if test="ruleType != null and ruleType != ''">rule_type = #{ruleType},</if>
+            <if test="ruleName != null and ruleName != ''">rule_name = #{ruleName},</if>
+            <if test="ruleExpr != null">rule_expr = #{ruleExpr},</if>
+            <if test="ruleMsg != null">rule_msg = #{ruleMsg},</if>
+            <if test="status != null and status != ''">status = #{status},</if>
+            <if test="remark != null">remark = #{remark},</if>
+            <if test="updateBy != null and updateBy != ''">update_by = #{updateBy},</if>
+            update_time = sysdate()
+        </set>
+        where rule_id = #{ruleId}
+    </update>
+
+    <delete id="deleteRuleById" parameterType="Long">
+        delete from mdm_quality_rule where rule_id = #{ruleId}
+    </delete>
+
+    <delete id="deleteRuleByIds" parameterType="Long">
+        delete from mdm_quality_rule where rule_id in
+        <foreach item="ruleId" collection="array" open="(" separator="," close=")">
+            #{ruleId}
+        </foreach>
+    </delete>
+
+</mapper>

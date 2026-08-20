@@ -71,3 +71,36 @@ export interface MdmCodeRuleSegment {
   segValue?: string
   orderNum?: number
 }
+
+/** 数据质量校验规则 */
+export interface MdmQualityRule {
+  ruleId?: number
+  objectId?: number
+  targetType?: string
+  targetValue?: string
+  ruleType?: string
+  ruleName?: string
+  ruleExpr?: string
+  ruleMsg?: string
+  status?: string
+}
+
+/** 数据质量台账 */
+export interface MdmQualityIssue {
+  issueId?: number
+  objectId?: number
+  dataId?: number
+  issueType?: string
+  issueDesc?: string
+  handleStatus?: string
+  handleBy?: string
+  handleTime?: string
+}
+
+/** 审核流程配置 */
+export interface MdmAuditFlow {
+  flowId?: number
+  objectId?: number
+  enabled?: string
+  auditRole?: string
+}

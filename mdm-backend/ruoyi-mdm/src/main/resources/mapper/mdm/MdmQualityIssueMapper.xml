@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.mdm.quality.mapper.MdmQualityIssueMapper">
+
+    <resultMap type="MdmQualityIssue" id="MdmQualityIssueResult">
+        <id     property="issueId"      column="issue_id"       />
+        <result property="objectId"     column="object_id"      />
+        <result property="dataId"       column="data_id"        />
+        <result property="issueType"    column="issue_type"     />
+        <result property="issueDesc"    column="issue_desc"     />
+        <result property="handleStatus" column="handle_status"  />
+        <result property="handleBy"     column="handle_by"      />
+        <result property="handleTime"   column="handle_time"    />
+        <result property="createBy"     column="create_by"      />
+        <result property="createTime"   column="create_time"    />
+        <result property="updateBy"     column="update_by"      />
+        <result property="updateTime"   column="update_time"    />
+        <result property="remark"       column="remark"         />
+    </resultMap>
+
+    <sql id="selectIssueVo">
+        select issue_id, object_id, data_id, issue_type, issue_desc, handle_status, handle_by, handle_time,
+               create_by, create_time, update_by, update_time, remark
+        from mdm_quality_issue
+    </sql>
+
+    <select id="selectIssueById" parameterType="Long" resultMap="MdmQualityIssueResult">
+        <include refid="selectIssueVo"/>
+        where issue_id = #{issueId}
+    </select>
+
+    <select id="selectIssueList" parameterType="MdmQualityIssue" resultMap="MdmQualityIssueResult">
+        <include refid="selectIssueVo"/>
+        <where>
+            <if test="objectId != null">and object_id = #{objectId}</if>
+            <if test="issueType != null and issueType != ''">and issue_type = #{issueType}</if>
+            <if test="handleStatus != null and handleStatus != ''">and handle_status = #{handleStatus}</if>
+            <if test="issueDesc != null and issueDesc != ''">and issue_desc like concat('%', #{issueDesc}, '%')</if>
+        </where>
+        order by handle_status, issue_id desc
+    </select>
+
+    <insert id="insertIssue" parameterType="MdmQualityIssue" useGeneratedKeys="true" keyProperty="issueId">
+        insert into mdm_quality_issue (
+            object_id, data_id, issue_type,
+            <if test="issueDesc != null and issueDesc != ''">issue_desc,</if>
+            <if test="handleStatus != null and handleStatus != ''">handle_status,</if>
+            <if test="createBy != null and createBy != ''">create_by,</if>
+            <if test="createTime != null">create_time,</if>
+            <if test="remark != null">remark,</if>
+            update_by, update_time
+        )values(
+            #{objectId}, #{dataId}, #{issueType},
+            <if test="issueDesc != null and issueDesc != ''">#{issueDesc},</if>
+            <if test="handleStatus != null and handleStatus != ''">#{handleStatus},</if>
+            <if test="createBy != null and createBy != ''">#{createBy},</if>
+            <if test="createTime != null">#{createTime},</if>
+            <if test="remark != null">#{remark},</if>
+            #{updateBy}, sysdate()
+        )
+    </insert>
+
+    <update id="updateIssueHandle" parameterType="MdmQualityIssue">
+        update mdm_quality_issue
+        <set>
+            <if test="handleStatus != null and handleStatus != ''">handle_status = #{handleStatus},</if>
+            <if test="handleBy != null and handleBy != ''">handle_by = #{handleBy},</if>
+            handle_time = sysdate(),
+            <if test="updateBy != null and updateBy != ''">update_by = #{updateBy},</if>
+            update_time = sysdate()
+        </set>
+        where issue_id = #{issueId}
+    </update>
+
+    <delete id="deleteIssueById" parameterType="Long">
+        delete from mdm_quality_issue where issue_id = #{issueId}
+    </delete>
+
+</mapper>

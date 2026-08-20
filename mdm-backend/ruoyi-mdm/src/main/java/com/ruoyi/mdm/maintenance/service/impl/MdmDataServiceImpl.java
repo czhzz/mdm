@@ -20,6 +20,8 @@ import com.ruoyi.mdm.model.domain.MdmAttribute;
 import com.ruoyi.mdm.model.domain.MdmObject;
 import com.ruoyi.mdm.model.mapper.MdmAttributeMapper;
 import com.ruoyi.mdm.model.mapper.MdmObjectMapper;
+import com.ruoyi.mdm.quality.domain.MdmQualityRule;
+import com.ruoyi.mdm.quality.mapper.MdmQualityRuleMapper;
 
 /**
  * 主数据动态数据 服务层实现
@@ -46,6 +48,9 @@ public class MdmDataServiceImpl implements IMdmDataService
 
     @Autowired
     private IMdmCodeRuleService codeRuleService;
+
+    @Autowired
+    private MdmQualityRuleMapper qualityRuleMapper;
 
     @Override
     public List<Map<String, Object>> selectDataList(String objectCode, Map<String, Object> query, int pageNum, int pageSize)
@@ -208,7 +213,7 @@ public class MdmDataServiceImpl implements IMdmDataService
             }
             columns.add(attr.getAttrCode());
         }
-        return new MdmTable(tableName, columns, attrs);
+        return new MdmTable(object.getObjectId(), tableName, columns, attrs);
     }
 
     /**
@@ -305,6 +310,25 @@ public class MdmDataServiceImpl implements IMdmDataService
                 }
             }
         }
+        // 执行配置的校验规则（启用的正则/必填规则）
+        MdmQualityRule rq = new MdmQualityRule();
+        rq.setObjectId(table.objectId);
+        rq.setStatus("0");
+        for (MdmQualityRule rule : qualityRuleMapper.selectRuleList(rq))
+        {
+            String ruleValue = StringUtils.isEmpty(rule.getTargetValue()) ? null
+                    : (data.get(rule.getTargetValue()) == null ? null : String.valueOf(data.get(rule.getTargetValue())).trim());
+            String msg = StringUtils.isNotEmpty(rule.getRuleMsg()) ? rule.getRuleMsg() : rule.getRuleName();
+            if ("REGEX".equals(rule.getRuleType()) && StringUtils.isNotEmpty(rule.getRuleExpr())
+                    && StringUtils.isNotEmpty(ruleValue) && !ruleValue.matches(rule.getRuleExpr()))
+            {
+                throw new ServiceException("【" + rule.getTargetValue() + "】" + msg);
+            }
+            if ("REQUIRED".equals(rule.getRuleType()) && StringUtils.isEmpty(ruleValue))
+            {
+                throw new ServiceException(msg);
+            }
+        }
     }
 
     /**
@@ -338,12 +362,14 @@ public class MdmDataServiceImpl implements IMdmDataService
     /** 动态表结构：表名 + 合法列集合 + 属性元数据 */
     private static class MdmTable
     {
+        final Long objectId;
         final String tableName;
         final Set<String> columns;
         final List<MdmAttribute> attributes;
 
-        MdmTable(String tableName, Set<String> columns, List<MdmAttribute> attributes)
+        MdmTable(Long objectId, String tableName, Set<String> columns, List<MdmAttribute> attributes)
         {
+            this.objectId = objectId;
             this.tableName = tableName;
             this.columns = columns;
             this.attributes = attributes;

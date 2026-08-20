@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.mdm.maintenance.mapper.MdmAuditFlowMapper">
+
+    <resultMap type="MdmAuditFlow" id="MdmAuditFlowResult">
+        <id     property="flowId"     column="flow_id"      />
+        <result property="objectId"   column="object_id"    />
+        <result property="enabled"    column="enabled"      />
+        <result property="auditRole"  column="audit_role"   />
+        <result property="createBy"   column="create_by"    />
+        <result property="createTime" column="create_time"  />
+        <result property="updateBy"   column="update_by"    />
+        <result property="updateTime" column="update_time"  />
+        <result property="remark"     column="remark"       />
+    </resultMap>
+
+    <sql id="selectFlowVo">
+        select flow_id, object_id, enabled, audit_role, create_by, create_time, update_by, update_time, remark
+        from mdm_audit_flow
+    </sql>
+
+    <select id="selectFlowByObjectId" parameterType="Long" resultMap="MdmAuditFlowResult">
+        <include refid="selectFlowVo"/>
+        where object_id = #{objectId} limit 1
+    </select>
+
+    <select id="selectFlowList" parameterType="MdmAuditFlow" resultMap="MdmAuditFlowResult">
+        <include refid="selectFlowVo"/>
+        <where>
+            <if test="objectId != null">and object_id = #{objectId}</if>
+            <if test="enabled != null and enabled != ''">and enabled = #{enabled}</if>
+        </where>
+        order by flow_id
+    </select>
+
+    <insert id="insertFlow" parameterType="MdmAuditFlow" useGeneratedKeys="true" keyProperty="flowId">
+        insert into mdm_audit_flow (
+            object_id,
+            <if test="enabled != null and enabled != ''">enabled,</if>
+            <if test="auditRole != null and auditRole != ''">audit_role,</if>
+            <if test="createBy != null and createBy != ''">create_by,</if>
+            <if test="createTime != null">create_time,</if>
+            <if test="remark != null">remark,</if>
+            update_by, update_time
+        )values(
+            #{objectId},
+            <if test="enabled != null and enabled != ''">#{enabled},</if>
+            <if test="auditRole != null and auditRole != ''">#{auditRole},</if>
+            <if test="createBy != null and createBy != ''">#{createBy},</if>
+            <if test="createTime != null">#{createTime},</if>
+            <if test="remark != null">#{remark},</if>
+            #{updateBy}, sysdate()
+        )
+    </insert>
+
+    <update id="updateFlow" parameterType="MdmAuditFlow">
+        update mdm_audit_flow
+        <set>
+            <if test="enabled != null and enabled != ''">enabled = #{enabled},</if>
+            <if test="auditRole != null">audit_role = #{auditRole},</if>
+            <if test="remark != null">remark = #{remark},</if>
+            <if test="updateBy != null and updateBy != ''">update_by = #{updateBy},</if>
+            update_time = sysdate()
+        </set>
+        where flow_id = #{flowId}
+    </update>
+
+</mapper>
