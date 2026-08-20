@@ -1,3 +1,5 @@
+SET NAMES utf8mb4;
+
 -- ----------------------------
 -- 主数据管理平台（MDM）初始化脚本
 -- 执行位置：mdm-backend/sql/mdm/init.sql

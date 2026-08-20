@@ -4,8 +4,8 @@ WORKDIR /build
 COPY . .
 RUN mvn clean package -DskipTests
 
-# 运行阶段
-FROM eclipse-temurin:8-jre-alpine
+# 运行阶段（eclipse-temurin:8-jre 为 multi-arch，amd64/arm64 通用）
+FROM eclipse-temurin:8-jre
 WORKDIR /app
 COPY --from=build /build/ruoyi-admin/target/ruoyi-admin.jar app.jar
 EXPOSE 8080
