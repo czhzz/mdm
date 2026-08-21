@@ -253,3 +253,66 @@ create table mdm_audit_task (
   primary key (task_id),
   key idx_object_data (object_id, data_id)
 ) engine=innodb auto_increment=1 comment = '主数据审核任务表';
+
+-- ----------------------------
+-- 4. 数据分发与集成
+-- ----------------------------
+-- 4.1 应用凭证表
+drop table if exists mdm_app;
+create table mdm_app (
+  app_id       bigint(20)      not null auto_increment    comment '应用ID',
+  app_name     varchar(100)    not null                   comment '应用名称（订阅方）',
+  appid        varchar(64)     not null                   comment '应用标识',
+  secret       varchar(128)    not null                   comment '应用密钥',
+  enabled      char(1)         default '0'                comment '状态（0停用 1启用）',
+  remark       varchar(500)    default null               comment '备注',
+  create_by    varchar(64)     default ''                 comment '创建者',
+  create_time  datetime                                   comment '创建时间',
+  update_by    varchar(64)     default ''                 comment '更新者',
+  update_time  datetime                                   comment '更新时间',
+  primary key (app_id),
+  unique key uk_appid (appid)
+) engine=innodb auto_increment=1 comment = '主数据应用凭证表';
+
+-- 4.2 分发配置表
+drop table if exists mdm_distribution;
+create table mdm_distribution (
+  dist_id      bigint(20)      not null auto_increment    comment '配置ID',
+  app_id       bigint(20)      not null                   comment '订阅应用ID',
+  object_id    bigint(20)      not null                   comment '数据对象ID',
+  trigger_type varchar(20)     default 'IMMEDIATE'        comment '触发时机（IMMEDIATE变更即推/MANUAL手动重推）',
+  endpoint_url varchar(500)    not null                   comment '订阅方回调地址',
+  enabled      char(1)         default '0'                comment '状态（0停用 1启用）',
+  remark       varchar(500)    default null               comment '备注',
+  create_by    varchar(64)     default ''                 comment '创建者',
+  create_time  datetime                                   comment '创建时间',
+  update_by    varchar(64)     default ''                 comment '更新者',
+  update_time  datetime                                   comment '更新时间',
+  primary key (dist_id),
+  key idx_app_object (app_id, object_id)
+) engine=innodb auto_increment=1 comment = '主数据分发配置表';
+
+-- 4.3 分发记录表
+drop table if exists mdm_distribution_record;
+create table mdm_distribution_record (
+  record_id    bigint(20)      not null auto_increment    comment '记录ID',
+  app_id       bigint(20)      not null                   comment '订阅应用ID',
+  object_code  varchar(64)     not null                   comment '数据对象编码',
+  data_id      bigint(20)      default null               comment '数据ID',
+  action_type  varchar(10)     not null                   comment '操作类型（INSERT/UPDATE）',
+  endpoint_url varchar(500)    not null                   comment '回调地址（重推用）',
+  payload      text                                       comment '推送内容(JSON)',
+  status       char(1)         default '0'                comment '状态（0待发送 1成功 2失败）',
+  error_msg    varchar(500)    default null               comment '失败原因',
+  send_time    datetime                                   comment '发送时间',
+  success_time datetime                                   comment '成功时间',
+  confirm_time datetime                                   comment '订阅方确认时间',
+  retry_count  int            default 0                   comment '重试次数',
+  create_by    varchar(64)     default ''                 comment '创建者',
+  create_time  datetime                                   comment '创建时间',
+  update_by    varchar(64)     default ''                 comment '更新者',
+  update_time  datetime                                   comment '更新时间',
+  remark       varchar(500)    default null               comment '备注',
+  primary key (record_id),
+  key idx_app_status (app_id, status)
+) engine=innodb auto_increment=1 comment = '主数据分发记录表';

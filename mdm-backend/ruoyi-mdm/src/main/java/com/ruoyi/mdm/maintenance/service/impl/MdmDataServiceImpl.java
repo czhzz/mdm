@@ -1,20 +1,26 @@
 package com.ruoyi.mdm.maintenance.service.impl;
 
 import java.math.BigDecimal;
+import java.sql.PreparedStatement;
+import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.support.GeneratedKeyHolder;
+import org.springframework.jdbc.support.KeyHolder;
 import org.springframework.stereotype.Service;
 import com.ruoyi.common.exception.ServiceException;
 import com.ruoyi.common.utils.SecurityUtils;
 import com.ruoyi.common.utils.StringUtils;
 import com.ruoyi.mdm.coderule.domain.MdmCodeRule;
 import com.ruoyi.mdm.coderule.service.IMdmCodeRuleService;
+import com.ruoyi.mdm.distribution.service.IDistributionService;
 import com.ruoyi.mdm.maintenance.service.IMdmDataService;
 import com.ruoyi.mdm.model.domain.MdmAttribute;
 import com.ruoyi.mdm.model.domain.MdmObject;
@@ -51,6 +57,9 @@ public class MdmDataServiceImpl implements IMdmDataService
 
     @Autowired
     private MdmQualityRuleMapper qualityRuleMapper;
+
+    @Autowired
+    private IDistributionService distributionService;
 
     @Override
     public List<Map<String, Object>> selectDataList(String objectCode, Map<String, Object> query, int pageNum, int pageSize)
@@ -101,27 +110,9 @@ public class MdmDataServiceImpl implements IMdmDataService
             }
         }
         validateData(table, data, null);
-        List<String> cols = new ArrayList<>();
-        List<Object> vals = new ArrayList<>();
-        for (Map.Entry<String, Object> e : data.entrySet())
-        {
-            if (table.columns.contains(e.getKey()) && StringUtils.isNotEmpty(String.valueOf(e.getValue())))
-            {
-                cols.add(e.getKey());
-                vals.add(e.getValue());
-            }
-        }
-        StringBuilder sql = new StringBuilder("INSERT INTO ").append(table.tableName)
-                .append(" (object_code, status, ");
-        sql.append(String.join(", ", cols));
-        sql.append(", create_by, create_time) VALUES (?, '0', ");
-        sql.append(String.join(", ", repeat("?", cols.size())));
-        sql.append(", ?, sysdate())");
-        List<Object> params = new ArrayList<>();
-        params.add(objectCode);
-        params.addAll(vals);
-        params.add(SecurityUtils.getUsername());
-        return jdbcTemplate.update(sql.toString(), params.toArray());
+        Long pk = doInsert(table, objectCode, "0", pickColumns(table, data));
+        distributionService.triggerPush(objectCode, pk, "INSERT", data);
+        return pk > 0 ? 1 : 0;
     }
 
     @Override
@@ -148,7 +139,9 @@ public class MdmDataServiceImpl implements IMdmDataService
         vals.add(SecurityUtils.getUsername());
         vals.add(id);
         String sql = "UPDATE " + table.tableName + " SET " + String.join(", ", sets) + " WHERE id = ?";
-        return jdbcTemplate.update(sql, vals.toArray());
+        int rows = jdbcTemplate.update(sql, vals.toArray());
+        distributionService.triggerPush(objectCode, id, "UPDATE", data);
+        return rows;
     }
 
     @Override
@@ -180,27 +173,9 @@ public class MdmDataServiceImpl implements IMdmDataService
             }
         }
         validateData(table, data, null);
-        List<String> cols = new ArrayList<>();
-        List<Object> vals = new ArrayList<>();
-        for (Map.Entry<String, Object> e : data.entrySet())
-        {
-            if (table.columns.contains(e.getKey()) && StringUtils.isNotEmpty(String.valueOf(e.getValue())))
-            {
-                cols.add(e.getKey());
-                vals.add(e.getValue());
-            }
-        }
-        StringBuilder sql = new StringBuilder("INSERT INTO ").append(table.tableName)
-                .append(" (object_code, status, ");
-        sql.append(String.join(", ", cols));
-        sql.append(", create_by, create_time) VALUES (?, '1', ");
-        sql.append(String.join(", ", repeat("?", cols.size())));
-        sql.append(", ?, sysdate())");
-        List<Object> params = new ArrayList<>();
-        params.add(objectCode);
-        params.addAll(vals);
-        params.add(SecurityUtils.getUsername());
-        return jdbcTemplate.update(sql.toString(), params.toArray());
+        Long pk = doInsert(table, objectCode, "1", pickColumns(table, data));
+        distributionService.triggerPush(objectCode, pk, "INSERT", data);
+        return pk > 0 ? 1 : 0;
     }
 
     @Override
@@ -296,6 +271,48 @@ public class MdmDataServiceImpl implements IMdmDataService
             list.add(s);
         }
         return list;
+    }
+
+    /** 从入参中挑出合法属性列（忽略空值与非法列） */
+    private Map<String, Object> pickColumns(MdmTable table, Map<String, Object> data)
+    {
+        Map<String, Object> picked = new LinkedHashMap<>();
+        for (Map.Entry<String, Object> e : data.entrySet())
+        {
+            if (table.columns.contains(e.getKey()) && StringUtils.isNotEmpty(String.valueOf(e.getValue())))
+            {
+                picked.put(e.getKey(), e.getValue());
+            }
+        }
+        return picked;
+    }
+
+    /** 动态插入并返回自增主键 */
+    private Long doInsert(MdmTable table, String objectCode, String status, Map<String, Object> cols)
+    {
+        StringBuilder sql = new StringBuilder("INSERT INTO ").append(table.tableName)
+                .append(" (object_code, status, ");
+        sql.append(String.join(", ", cols.keySet()));
+        sql.append(", create_by, create_time) VALUES (?, ?, ");
+        sql.append(String.join(", ", repeat("?", cols.size())));
+        sql.append(", ?, sysdate())");
+        List<Object> params = new ArrayList<>();
+        params.add(objectCode);
+        params.add(status);
+        params.addAll(cols.values());
+        params.add(SecurityUtils.getUsername());
+        KeyHolder keyHolder = new GeneratedKeyHolder();
+        jdbcTemplate.update(conn ->
+        {
+            PreparedStatement ps = conn.prepareStatement(sql.toString(), Statement.RETURN_GENERATED_KEYS);
+            for (int i = 0; i < params.size(); i++)
+            {
+                ps.setObject(i + 1, params.get(i));
+            }
+            return ps;
+        }, keyHolder);
+        Number key = keyHolder.getKey();
+        return key == null ? 0L : key.longValue();
     }
 
     /**

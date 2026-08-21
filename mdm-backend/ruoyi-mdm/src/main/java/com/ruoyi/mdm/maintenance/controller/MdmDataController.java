@@ -3,6 +3,7 @@ package com.ruoyi.mdm.maintenance.controller;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import javax.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -14,6 +15,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 import com.ruoyi.common.annotation.Log;
 import com.ruoyi.common.core.controller.BaseController;
 import com.ruoyi.common.core.domain.AjaxResult;
@@ -23,6 +25,7 @@ import com.ruoyi.mdm.maintenance.domain.MdmAuditFlow;
 import com.ruoyi.mdm.maintenance.service.IMdmAuditFlowService;
 import com.ruoyi.mdm.maintenance.service.IMdmAuditService;
 import com.ruoyi.mdm.maintenance.service.IMdmDataService;
+import com.ruoyi.mdm.maintenance.service.IMdmExcelService;
 import com.ruoyi.mdm.model.domain.MdmObject;
 import com.ruoyi.mdm.model.mapper.MdmObjectMapper;
 
@@ -46,6 +49,9 @@ public class MdmDataController extends BaseController
 
     @Autowired
     private MdmObjectMapper objectMapper;
+
+    @Autowired
+    private IMdmExcelService excelService;
 
     /**
      * 判断对象是否启用审核流程
@@ -136,6 +142,43 @@ public class MdmDataController extends BaseController
     public AjaxResult remove(@PathVariable String objectCode, @PathVariable Long[] ids)
     {
         return toAjax(dataService.deleteDataByIds(objectCode, ids));
+    }
+
+    /**
+     * 下载导入模板（表头为属性名）
+     */
+    @PreAuthorize("@ss.hasPermi('mdm:maintenance:query')")
+    @GetMapping("/{objectCode}/template")
+    public void template(@PathVariable String objectCode, HttpServletResponse response)
+    {
+        excelService.downloadTemplate(objectCode, response);
+    }
+
+    /**
+     * 批量导入（逐行校验 + 失败行反馈）
+     */
+    @PreAuthorize("@ss.hasPermi('mdm:maintenance:add')")
+    @Log(title = "主数据导入", businessType = BusinessType.IMPORT)
+    @PostMapping("/{objectCode}/import")
+    public AjaxResult importExcel(@PathVariable String objectCode, @RequestParam("file") MultipartFile file)
+    {
+        return excelService.importExcel(objectCode, file);
+    }
+
+    /**
+     * 按查询条件导出（动态属性列）
+     */
+    @PreAuthorize("@ss.hasPermi('mdm:maintenance:query')")
+    @GetMapping("/{objectCode}/export")
+    public void export(@PathVariable String objectCode, @RequestParam Map<String, Object> params,
+            HttpServletResponse response)
+    {
+        Map<String, Object> query = new HashMap<>(params);
+        query.remove("pageNum");
+        query.remove("pageSize");
+        query.remove("orderByColumn");
+        query.remove("isAsc");
+        excelService.exportExcel(objectCode, query, response);
     }
 
     /**

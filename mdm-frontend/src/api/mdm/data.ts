@@ -44,6 +44,16 @@ export function delData(objectCode: string, ids: number[] | string): Promise<Aja
   })
 }
 
+/** 批量导入主数据（Excel） */
+export function importData(objectCode: string, formData: FormData): Promise<AjaxResult> {
+  return request({
+    url: '/mdm/data/' + objectCode + '/import',
+    method: 'post',
+    data: formData,
+    headers: { 'Content-Type': 'multipart/form-data' }
+  })
+}
+
 /** 更新主数据生命周期状态 */
 export function updateDataStatus(objectCode: string, id: number, status: string): Promise<AjaxResult> {
   return request({

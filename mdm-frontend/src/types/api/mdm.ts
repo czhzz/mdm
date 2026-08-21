@@ -113,6 +113,49 @@ export interface MdmAuditTask {
   createTime?: string
 }
 
+/** 应用凭证 */
+export interface MdmApp {
+  appId?: number
+  appName?: string
+  appid?: string
+  secret?: string
+  enabled?: string
+  remark?: string
+  createTime?: string
+}
+
+/** 分发配置 */
+export interface MdmDistribution {
+  distId?: number
+  appId?: number
+  objectId?: number
+  triggerType?: string
+  endpointUrl?: string
+  enabled?: string
+  remark?: string
+  appName?: string
+  objectName?: string
+}
+
+/** 分发记录 */
+export interface MdmDistributionRecord {
+  recordId?: number
+  appId?: number
+  objectCode?: string
+  dataId?: number
+  actionType?: string
+  endpointUrl?: string
+  payload?: string
+  status?: string
+  errorMsg?: string
+  sendTime?: string
+  successTime?: string
+  confirmTime?: string
+  retryCount?: number
+  appName?: string
+  createTime?: string
+}
+
 /** 审核流程配置 */
 export interface MdmAuditFlow {
   flowId?: number

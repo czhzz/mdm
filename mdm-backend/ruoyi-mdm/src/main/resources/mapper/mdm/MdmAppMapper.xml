@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.mdm.distribution.mapper.MdmAppMapper">
+
+    <resultMap type="MdmApp" id="MdmAppResult">
+        <id     property="appId"      column="app_id"      />
+        <result property="appName"    column="app_name"    />
+        <result property="appid"      column="appid"       />
+        <result property="secret"     column="secret"      />
+        <result property="enabled"    column="enabled"     />
+        <result property="remark"     column="remark"      />
+        <result property="createBy"   column="create_by"   />
+        <result property="createTime" column="create_time" />
+        <result property="updateBy"   column="update_by"   />
+        <result property="updateTime" column="update_time" />
+    </resultMap>
+
+    <sql id="selectAppVo">
+        select app_id, app_name, appid, secret, enabled, remark, create_by, create_time, update_by, update_time
+        from mdm_app
+    </sql>
+
+    <select id="selectAppById" parameterType="Long" resultMap="MdmAppResult">
+        <include refid="selectAppVo"/>
+        where app_id = #{appId}
+    </select>
+
+    <select id="selectAppByAppid" parameterType="String" resultMap="MdmAppResult">
+        <include refid="selectAppVo"/>
+        where appid = #{appid}
+    </select>
+
+    <select id="selectAppList" parameterType="MdmApp" resultMap="MdmAppResult">
+        <include refid="selectAppVo"/>
+        <where>
+            <if test="appName != null and appName != ''">and app_name like concat('%', #{appName}, '%')</if>
+            <if test="enabled != null and enabled != ''">and enabled = #{enabled}</if>
+        </where>
+        order by app_id desc
+    </select>
+
+    <insert id="insertApp" parameterType="MdmApp" useGeneratedKeys="true" keyProperty="appId">
+        insert into mdm_app (
+            app_name, appid, secret,
+            <if test="enabled != null and enabled != ''">enabled,</if>
+            <if test="remark != null">remark,</if>
+            create_by, create_time
+        ) values (
+            #{appName}, #{appid}, #{secret},
+            <if test="enabled != null and enabled != ''">#{enabled},</if>
+            <if test="remark != null">#{remark},</if>
+            #{createBy}, sysdate()
+        )
+    </insert>
+
+    <update id="updateApp" parameterType="MdmApp">
+        update mdm_app
+        <set>
+            <if test="appName != null and appName != ''">app_name = #{appName},</if>
+            <if test="enabled != null and enabled != ''">enabled = #{enabled},</if>
+            <if test="remark != null">remark = #{remark},</if>
+            update_by = #{updateBy}, update_time = sysdate()
+        </set>
+        where app_id = #{appId}
+    </update>
+
+    <update id="updateSecret" parameterType="MdmApp">
+        update mdm_app
+        set secret = #{secret}, update_by = #{updateBy}, update_time = sysdate()
+        where app_id = #{appId}
+    </update>
+
+    <delete id="deleteAppByIds" parameterType="Long">
+        delete from mdm_app where app_id in
+        <foreach collection="array" item="appId" open="(" separator="," close=")">
+            #{appId}
+        </foreach>
+    </delete>
+
+</mapper>

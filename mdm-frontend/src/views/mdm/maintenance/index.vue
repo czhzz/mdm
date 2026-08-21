@@ -104,6 +104,26 @@
             >删除</el-button
           >
         </el-col>
+        <el-col :span="1.5">
+          <el-button type="success" plain icon="Download" @click="handleExport"
+            >导出</el-button
+          >
+        </el-col>
+        <el-col :span="1.5">
+          <el-button type="warning" plain icon="Download" @click="handleTemplate"
+            >下载模板</el-button
+          >
+        </el-col>
+        <el-col :span="1.5">
+          <el-upload
+            :show-file-list="false"
+            :http-request="handleImport"
+            accept=".xlsx,.xls"
+            style="display: inline-block"
+          >
+            <el-button type="primary" plain icon="Upload">导入</el-button>
+          </el-upload>
+        </el-col>
         <right-toolbar v-model:showSearch="showSearch" @queryTable="getList" />
       </el-row>
 
@@ -256,8 +276,10 @@ import {
   addData,
   editData,
   delData,
+  importData,
   updateDataStatus,
 } from "@/api/mdm/data";
+import { download } from "@/utils/request";
 
 const objectOptions = ref<MdmObject[]>([]);
 const objectCode = ref("");
@@ -414,6 +436,27 @@ const handleDelete = (row?: Record<string, any>) => {
       getList();
     })
     .catch(() => {});
+};
+
+/** 导出（按当前查询条件） */
+const handleExport = () => {
+  const name = currentMeta.value.object.objectName ?? objectCode.value;
+  download("/mdm/data/" + objectCode.value + "/export", queryParams, name + ".xlsx");
+};
+
+/** 下载导入模板 */
+const handleTemplate = () => {
+  const name = currentMeta.value.object.objectName ?? objectCode.value;
+  download("/mdm/data/" + objectCode.value + "/template", {}, name + "导入模板.xlsx");
+};
+
+/** 批量导入 */
+const handleImport = async (options: { file: File }) => {
+  const formData = new FormData();
+  formData.append("file", options.file);
+  const res = await importData(objectCode.value, formData);
+  ElMessageBox.alert(res.msg, "导入结果", { type: "warning" });
+  getList();
 };
 
 loadObjects();
