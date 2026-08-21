@@ -19,7 +19,12 @@ import com.ruoyi.common.core.controller.BaseController;
 import com.ruoyi.common.core.domain.AjaxResult;
 import com.ruoyi.common.core.page.TableDataInfo;
 import com.ruoyi.common.enums.BusinessType;
+import com.ruoyi.mdm.maintenance.domain.MdmAuditFlow;
+import com.ruoyi.mdm.maintenance.service.IMdmAuditFlowService;
+import com.ruoyi.mdm.maintenance.service.IMdmAuditService;
 import com.ruoyi.mdm.maintenance.service.IMdmDataService;
+import com.ruoyi.mdm.model.domain.MdmObject;
+import com.ruoyi.mdm.model.mapper.MdmObjectMapper;
 
 /**
  * 主数据动态数据 信息操作处理（按对象编码动态生成 CRUD）
@@ -32,6 +37,29 @@ public class MdmDataController extends BaseController
 {
     @Autowired
     private IMdmDataService dataService;
+
+    @Autowired
+    private IMdmAuditFlowService flowService;
+
+    @Autowired
+    private IMdmAuditService auditService;
+
+    @Autowired
+    private MdmObjectMapper objectMapper;
+
+    /**
+     * 判断对象是否启用审核流程
+     */
+    private boolean auditEnabled(String objectCode)
+    {
+        MdmObject object = objectMapper.checkObjectCodeUnique(objectCode);
+        if (object == null)
+        {
+            return false;
+        }
+        MdmAuditFlow flow = flowService.selectFlowByObjectId(object.getObjectId());
+        return flow != null && "1".equals(flow.getEnabled());
+    }
 
     /**
      * 查询主数据列表（手动分页，动态属性列为查询条件）
@@ -73,17 +101,29 @@ public class MdmDataController extends BaseController
     @PostMapping("/{objectCode}")
     public AjaxResult add(@PathVariable String objectCode, @RequestBody Map<String, Object> data)
     {
+        // 启用审核的对象：新增走提交审核
+        if (auditEnabled(objectCode))
+        {
+            auditService.submitAudit(objectCode, 0L, "INSERT", data);
+            return success("已提交审核，审核通过后生效");
+        }
         return toAjax(dataService.insertData(objectCode, data));
     }
 
     /**
-     * 修改主数据
+     * 修改主数据（启用审核时走待审核版本，不直接覆盖）
      */
     @PreAuthorize("@ss.hasPermi('mdm:maintenance:edit')")
     @Log(title = "主数据", businessType = BusinessType.UPDATE)
     @PutMapping("/{objectCode}/{id}")
     public AjaxResult edit(@PathVariable String objectCode, @PathVariable Long id, @RequestBody Map<String, Object> data)
     {
+        // 启用审核的对象：修改走提交审核，原数据保持生效
+        if (auditEnabled(objectCode))
+        {
+            auditService.submitAudit(objectCode, id, "UPDATE", data);
+            return success("修改已提交审核，审核通过后生效");
+        }
         return toAjax(dataService.updateData(objectCode, id, data));
     }
 

@@ -368,11 +368,11 @@ const submitForm = () => {
       payload[attr.attrCode] = form.value[attr.attrCode];
     });
     if (form.value.id != null) {
-      await editData(objectCode.value, form.value.id, payload);
-      ElMessage.success("修改成功");
+      const res = await editData(objectCode.value, form.value.id, payload);
+      ElMessage.success(res.msg || "修改成功");
     } else {
-      await addData(objectCode.value, payload);
-      ElMessage.success("新增成功");
+      const res = await addData(objectCode.value, payload);
+      ElMessage.success(res.msg || "新增成功");
     }
     open.value = false;
     getList();

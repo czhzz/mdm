@@ -97,6 +97,22 @@ export interface MdmQualityIssue {
   handleTime?: string
 }
 
+/** 主数据审核任务 */
+export interface MdmAuditTask {
+  taskId?: number
+  objectId?: number
+  dataId?: number
+  actionType?: string
+  beforeData?: string
+  afterData?: string
+  status?: string
+  rejectReason?: string
+  submitBy?: string
+  auditBy?: string
+  auditTime?: string
+  createTime?: string
+}
+
 /** 审核流程配置 */
 export interface MdmAuditFlow {
   flowId?: number

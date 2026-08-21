@@ -76,4 +76,23 @@ public interface IMdmDataService
      * @return 结果
      */
     public int updateDataStatus(String objectCode, Long id, String status);
+
+    /**
+     * 审核通过后新增并生效（供审核落地，跳过二次校验）
+     *
+     * @param objectCode 对象编码
+     * @param data 数据
+     * @return 结果
+     */
+    public int applyAuditInsert(String objectCode, Map<String, Object> data);
+
+    /**
+     * 审核通过后更新（保持原状态，供审核落地）
+     *
+     * @param objectCode 对象编码
+     * @param id 数据ID
+     * @param data 数据
+     * @return 结果
+     */
+    public int applyAuditUpdate(String objectCode, Long id, Map<String, Object> data);
 }

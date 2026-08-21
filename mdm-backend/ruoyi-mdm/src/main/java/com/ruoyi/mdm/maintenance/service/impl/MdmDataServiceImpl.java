@@ -89,8 +89,7 @@ public class MdmDataServiceImpl implements IMdmDataService
     public int insertData(String objectCode, Map<String, Object> data)
     {
         MdmTable table = resolveTable(objectCode);
-        validateData(table, data, null);
-        // 按编码方案自动生成编码并回填到编码字段
+        // 先按编码方案生成编码回填，再校验（编码字段为必填时不会被误判为空）
         MdmObject object = objectMapper.checkObjectCodeUnique(objectCode);
         if (StringUtils.isNotNull(object))
         {
@@ -101,6 +100,7 @@ public class MdmDataServiceImpl implements IMdmDataService
                 data.put(rule.getCodeField(), codeRuleService.generateCode(rule, data));
             }
         }
+        validateData(table, data, null);
         List<String> cols = new ArrayList<>();
         List<Object> vals = new ArrayList<>();
         for (Map.Entry<String, Object> e : data.entrySet())
@@ -162,6 +162,51 @@ public class MdmDataServiceImpl implements IMdmDataService
         }
         sql.append(")");
         return jdbcTemplate.update(sql.toString(), (Object[]) ids);
+    }
+
+    @Override
+    public int applyAuditInsert(String objectCode, Map<String, Object> data)
+    {
+        MdmTable table = resolveTable(objectCode);
+        // 同 insertData：先生成编码再校验（审核落地时再次校验，防止绕过校验的数据落库）
+        MdmObject object = objectMapper.checkObjectCodeUnique(objectCode);
+        if (StringUtils.isNotNull(object))
+        {
+            MdmCodeRule rule = codeRuleService.selectRuleByObjectId(object.getObjectId());
+            if (StringUtils.isNotNull(rule) && StringUtils.isNotEmpty(rule.getCodeField())
+                    && table.columns.contains(rule.getCodeField()))
+            {
+                data.put(rule.getCodeField(), codeRuleService.generateCode(rule, data));
+            }
+        }
+        validateData(table, data, null);
+        List<String> cols = new ArrayList<>();
+        List<Object> vals = new ArrayList<>();
+        for (Map.Entry<String, Object> e : data.entrySet())
+        {
+            if (table.columns.contains(e.getKey()) && StringUtils.isNotEmpty(String.valueOf(e.getValue())))
+            {
+                cols.add(e.getKey());
+                vals.add(e.getValue());
+            }
+        }
+        StringBuilder sql = new StringBuilder("INSERT INTO ").append(table.tableName)
+                .append(" (object_code, status, ");
+        sql.append(String.join(", ", cols));
+        sql.append(", create_by, create_time) VALUES (?, '1', ");
+        sql.append(String.join(", ", repeat("?", cols.size())));
+        sql.append(", ?, sysdate())");
+        List<Object> params = new ArrayList<>();
+        params.add(objectCode);
+        params.addAll(vals);
+        params.add(SecurityUtils.getUsername());
+        return jdbcTemplate.update(sql.toString(), params.toArray());
+    }
+
+    @Override
+    public int applyAuditUpdate(String objectCode, Long id, Map<String, Object> data)
+    {
+        return updateData(objectCode, id, data);
     }
 
     @Override

@@ -116,8 +116,8 @@ create table mdm_code_rule_segment (
 -- 4. 菜单与权限
 -- ----------------------------
 -- 清理已存在的 mdm 菜单（保证脚本可重复执行）
-delete from sys_role_menu where menu_id between 2000 and 2026;
-delete from sys_menu where menu_id between 2000 and 2026;
+delete from sys_role_menu where menu_id between 2000 and 2027;
+delete from sys_menu where menu_id between 2000 and 2027;
 -- 一级目录
 insert into sys_menu values('2000', '主数据管理', '0', '10', 'mdm',            null,                    '', '', 1, 0, 'M', '0', '0', '',                    'tree-table', 'admin', sysdate(), '', null, '主数据管理目录');
 -- 二级菜单
@@ -150,6 +150,8 @@ insert into sys_menu values('2023', '规则查询', '2002', '1', '', null, '', '
 insert into sys_menu values('2024', '规则新增', '2002', '2', '', null, '', '', 1, 0, 'F', '0', '0', 'mdm:coderule:add',   '#', 'admin', sysdate(), '', null, '');
 insert into sys_menu values('2025', '规则修改', '2002', '3', '', null, '', '', 1, 0, 'F', '0', '0', 'mdm:coderule:edit',  '#', 'admin', sysdate(), '', null, '');
 insert into sys_menu values('2026', '规则删除', '2002', '4', '', null, '', '', 1, 0, 'F', '0', '0', 'mdm:coderule:remove','#', 'admin', sysdate(), '', null, '');
+-- 审核菜单（复用数据维护按钮权限）
+insert into sys_menu values('2027', '审核', '2000', '7', 'audit', 'mdm/audit/index', '', '', 1, 0, 'C', '0', '0', 'mdm:maintenance:list', 'example', 'admin', sysdate(), '', null, '审核任务菜单');
 
 -- ----------------------------
 -- 5. 种子字典
@@ -226,3 +228,28 @@ create table mdm_audit_flow (
   primary key (flow_id),
   unique key uk_object_flow (object_id)
 ) engine=innodb auto_increment=1 comment = '主数据审核流程配置表';
+
+-- ----------------------------
+-- 3.5 审核任务表
+-- ----------------------------
+drop table if exists mdm_audit_task;
+create table mdm_audit_task (
+  task_id      bigint(20)      not null auto_increment    comment '任务ID',
+  object_id    bigint(20)      not null                   comment '对象ID',
+  data_id      bigint(20)      not null                   comment '数据ID',
+  action_type  varchar(10)     not null                   comment '操作类型（INSERT新增/UPDATE修改）',
+  before_data  text                                       comment '变更前快照(JSON)',
+  after_data   text                                       comment '变更后快照(JSON)',
+  status       char(1)         default '0'                comment '状态（0待审核 1通过 2驳回）',
+  reject_reason varchar(500)   default null               comment '驳回原因',
+  submit_by    varchar(64)     default null               comment '提交人',
+  audit_by     varchar(64)     default null               comment '审核人',
+  audit_time   datetime                                   comment '审核时间',
+  create_by    varchar(64)     default ''                 comment '创建者',
+  create_time  datetime                                   comment '创建时间',
+  update_by    varchar(64)     default ''                 comment '更新者',
+  update_time  datetime                                   comment '更新时间',
+  remark       varchar(500)    default null               comment '备注',
+  primary key (task_id),
+  key idx_object_data (object_id, data_id)
+) engine=innodb auto_increment=1 comment = '主数据审核任务表';
