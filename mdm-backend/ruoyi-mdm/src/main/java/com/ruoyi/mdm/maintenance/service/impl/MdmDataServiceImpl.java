@@ -223,7 +223,6 @@ public class MdmDataServiceImpl implements IMdmDataService
     }
 
     @Override
-    @Override
     public List<Map<String, Object>> selectRefDataList(String refObjectCode, String displayFields, String keyword)
     {
         if (!isValidIdentifier(refObjectCode))

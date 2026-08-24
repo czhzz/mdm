@@ -182,6 +182,18 @@ public class MdmDataController extends BaseController
     }
 
     /**
+     * 查询引用数据列表（供前端下拉选择）
+     */
+    @PreAuthorize("@ss.hasPermi('mdm:maintenance:query')")
+    @GetMapping("/ref/{objectCode}")
+    public AjaxResult refData(@PathVariable String objectCode,
+            @RequestParam(required = false) String display,
+            @RequestParam(required = false) String keyword)
+    {
+        return success(dataService.selectRefDataList(objectCode, display, keyword));
+    }
+
+    /**
      * 更新主数据生命周期状态（生效/停用）
      */
     @PreAuthorize("@ss.hasPermi('mdm:maintenance:edit')")
