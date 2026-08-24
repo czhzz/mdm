@@ -159,8 +159,8 @@ flowable:
   async-executor-activate: false
   # 数据库 schema 自动更新
   database-schema-update: true
+  # 不扫描 classpath 流程定义（流程经 API 部署）
+  check-process-definitions: false
   # 关闭 IDM 引擎（复用若依用户体系）
   idm-engine-configurator:
     enabled: false
-  # 流程定义文件位置
-  process-definition-location-prefix: classpath:/processes/
