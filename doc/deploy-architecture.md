@@ -22,6 +22,8 @@ mdm/
 | 安全框架 | Spring Security + JWT |
 | 持久层 | MyBatis + Druid |
 | 任务调度 | Quartz |
+| 工作流引擎 | Flowable 6.8.1（1.1.0） |
+| 消息队列 | RabbitMQ + Spring AMQP（1.1.0） |
 
 后端模块：
 - `ruoyi-admin`：Web 启动模块
@@ -30,6 +32,7 @@ mdm/
 - `ruoyi-common`：通用工具
 - `ruoyi-quartz`：定时任务
 - `ruoyi-generator`：代码生成
+- `ruoyi-mdm`：主数据管理（model/coderule/standard/maintenance/quality/distribution/relation/audit/lineage/template）
 
 ### 前端（mdm-frontend）
 | 组件 | 版本 |
@@ -75,6 +78,7 @@ mdm/
 | Node.js | 16+（Vite 6 建议 18+/20+） |
 | MySQL | 5.7 / 8.0 |
 | Redis | 5.0+ |
+| RabbitMQ | 3.9+（管理插件，1.1.0） |
 | Nginx | 任意稳定版 |
 
 ## 5. 部署步骤
@@ -147,3 +151,4 @@ server {
 | 前端（Nginx） | 80 |
 | MySQL | 3306 |
 | Redis | 6379 |
+| RabbitMQ | 5672（AMQP）/ 15672（管理台） |

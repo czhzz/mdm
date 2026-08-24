@@ -1,6 +1,6 @@
 # 主数据管理平台 部署与运维手册
 
-> 适用于 1.0.0。单体后端（ruoyi-admin 含 mdm 模块）+ MySQL 8 + Redis 7，Nginx 反代前端。架构详见 `deploy-architecture.md`。
+> 适用于 1.1.0。单体后端（ruoyi-admin 含 mdm 模块）+ MySQL 8 + Redis 7 + RabbitMQ 3 + Flowable 6.8.1，Nginx 反代前端。架构详见 `deploy-architecture.md`。
 
 ## 一、快速启动（Docker Compose）
 
@@ -10,7 +10,7 @@
 # 首次或代码变更后：构建镜像（后端镜像内执行 mvn package）
 docker compose build backend
 
-# 启动全部服务（mysql / redis / backend / frontend）
+# 启动全部服务（mysql / redis / rabbitmq / backend / frontend）
 docker compose up -d
 
 # 查看状态（全部 healthy 后可用）
@@ -74,3 +74,37 @@ docker exec mdm-mysql mysqladmin -uroot -p<password> ping   # DB 存活
 
 - 分发推送当前为内嵌固定线程池（见 `DistributionServiceImpl`，标注 `ponytail`），订阅方增多时按设计决策五引入 RabbitMQ。
 - 若依原功能与 mdm 完全隔离：停用对应菜单/`/mdm/**` 路由、删除 mdm 表即可回退，不影响 `sys_*` 与若依业务（见 release-checklist 回滚演练）。
+
+## 八、1.1.0 新增组件运维
+
+### 8.1 RabbitMQ
+
+- 管理台：http://localhost:15672（默认 guest/guest，生产务必改密码并关闭 guest）
+- 分发交换机：`mdm.distribution`（topic），死信队列 `mdm.distribution.dlx.queue`
+- 死信积压告警：积压 > 100 建议检查订阅方消费状态；分发监控页可看实时数据
+- 订阅方队列：分发配置保存时自动声明（名称可自定义，默认 `mdm.dist.<对象编码>`）
+- 监控命令：
+
+```bash
+docker exec mdm-rabbitmq rabbitmqctl list_queues name messages
+docker exec mdm-rabbitmq rabbitmqctl list_exchanges
+```
+
+### 8.2 Flowable 流程引擎
+
+- ACT_* 表由引擎自动创建（`flowable.database-schema-update: true`），与 mdm 表同库
+- 流程运维入口：主数据管理 → 流程管理（部署/挂起/激活/删除）；设计器三个预设模板
+- 1.0.0 审核数据不迁移：旧表 `mdm_audit_flow`/`mdm_audit_task` 已废弃可归档
+- 对象绑定流程：模型管理 → 对象编辑 → 审核流程下拉（未绑定的对象不做审核）
+- 已知限制：退回简化实现为驳回；复杂退回需 Flowable 跳转 API（1.2.0）
+
+### 8.3 存量对象血缘列补丁
+
+1.1.0 之前发布的对象无 `source` 列，查看血缘前需手动补列（见 `lineage-guide.md`）。
+
+### 8.4 升级顺序（1.0.0 → 1.1.0）
+
+1. 停后端 → 备份数据库 → 重新执行 `sql/mdm/init.sql`（幂等，自动加列/加菜单/加字典）
+2. `.env` 补齐 `RABBITMQ_*` 变量（模板见 `.env.example`）
+3. `docker compose up -d`（自动拉起 rabbitmq 容器）
+4. 流程管理页部署审核流程 → 对象绑定流程

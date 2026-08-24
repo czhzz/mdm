@@ -116,8 +116,8 @@ create table mdm_code_rule_segment (
 -- 4. 菜单与权限
 -- ----------------------------
 -- 清理已存在的 mdm 菜单（保证脚本可重复执行）
-delete from sys_role_menu where menu_id between 2000 and 2035;
-delete from sys_menu where menu_id between 2000 and 2035;
+delete from sys_role_menu where menu_id between 2000 and 2045;
+delete from sys_menu where menu_id between 2000 and 2045;
 -- 一级目录
 insert into sys_menu values('2000', '主数据管理', '0', '10', 'mdm',            null,                    '', '', 1, 0, 'M', '0', '0', '',                    'tree-table', 'admin', sysdate(), '', null, '主数据管理目录');
 -- 二级菜单
@@ -162,12 +162,24 @@ insert into sys_menu values('2032', '分发查询', '2006', '1', '', null, '', '
 insert into sys_menu values('2033', '分发新增', '2006', '2', '', null, '', '', 1, 0, 'F', '0', '0', 'mdm:distribution:add',   '#', 'admin', sysdate(), '', null, '');
 insert into sys_menu values('2034', '分发修改', '2006', '3', '', null, '', '', 1, 0, 'F', '0', '0', 'mdm:distribution:edit',  '#', 'admin', sysdate(), '', null, '');
 insert into sys_menu values('2035', '分发删除', '2006', '4', '', null, '', '', 1, 0, 'F', '0', '0', 'mdm:distribution:remove','#', 'admin', sysdate(), '', null, '');
+-- 1.1.0 新增菜单
+insert into sys_menu values('2036', '关系管理',   '2000', '7', 'relation',      'mdm/relation/index',         '', '', 1, 0, 'C', '0', '0', 'mdm:relation:list',      'link',        'admin', sysdate(), '', null, '关系管理菜单');
+insert into sys_menu values('2037', '模板库',     '2000', '8', 'template',      'mdm/template/index',         '', '', 1, 0, 'C', '0', '0', 'mdm:template:list',      'component',    'admin', sysdate(), '', null, '对象模板库菜单');
+insert into sys_menu values('2038', '质量大屏',   '2000', '9', 'quality-dashboard', 'mdm/quality-dashboard/index', '', '', 1, 0, 'C', '0', '0', 'mdm:quality:list',   'dashboard',    'admin', sysdate(), '', null, '数据质量大屏');
+insert into sys_menu values('2039', '流程管理',   '2000', '10', 'audit-process', 'mdm/audit/process-list',     '', '', 1, 0, 'C', '0', '0', 'mdm:maintenance:list', 'guide',        'admin', sysdate(), '', null, '审核流程管理');
+insert into sys_menu values('2040', '流程设计器', '2039', '1', 'audit-designer', 'mdm/audit/designer/index',   '', '', 1, 0, 'C', '0', '0', 'mdm:maintenance:list', 'edit',         'admin', sysdate(), '', null, 'BPMN 流程设计器');
+insert into sys_menu values('2041', '分发监控',   '2006', '5', 'dist-monitor',   'mdm/distribution/monitor',   '', '', 1, 0, 'C', '0', '0', 'mdm:distribution:list', 'monitor',      'admin', sysdate(), '', null, '分发监控面板');
+-- 1.1.0 按钮权限
+insert into sys_menu values('2042', '关系查询', '2036', '1', '', null, '', '', 1, 0, 'F', '0', '0', 'mdm:relation:query',  '#', 'admin', sysdate(), '', null, '');
+insert into sys_menu values('2043', '关系新增', '2036', '2', '', null, '', '', 1, 0, 'F', '0', '0', 'mdm:relation:add',    '#', 'admin', sysdate(), '', null, '');
+insert into sys_menu values('2044', '关系修改', '2036', '3', '', null, '', '', 1, 0, 'F', '0', '0', 'mdm:relation:edit',   '#', 'admin', sysdate(), '', null, '');
+insert into sys_menu values('2045', '关系删除', '2036', '4', '', null, '', '', 1, 0, 'F', '0', '0', 'mdm:relation:remove', '#', 'admin', sysdate(), '', null, '');
 
 -- ----------------------------
 -- 5. 种子字典
 -- ----------------------------
 -- 清理已存在的 mdm 种子字典（保证脚本可重复执行）
-delete from sys_dict_data where dict_code between 2000 and 2006;
+delete from sys_dict_data where dict_code between 2000 and 2199;
 delete from sys_dict_type where dict_id = 200;
 -- 字典类型：主数据属性数据类型
 insert into sys_dict_type values(200, '主数据属性数据类型', 'mdm_data_type', '0', 'admin', sysdate(), 'admin', sysdate(), '主数据模型属性数据类型');
@@ -384,3 +396,11 @@ drop procedure if exists mdm_alter_columns;
 
 -- 1.1.0 字典：数据类型新增"引用"
 insert into sys_dict_data values(2199, 8, '引用', 'ref', 'mdm_data_type', '', 'default', 'N', '0', 'admin', sysdate(), 'admin', sysdate(), null) on duplicate key update dict_label='引用';
+
+-- 1.1.0 字典：级联规则
+delete from sys_dict_data where dict_code between 2200 and 2202;
+delete from sys_dict_type where dict_id = 201;
+insert into sys_dict_type values(201, '级联规则', 'mdm_cascade_rule', '0', 'admin', sysdate(), 'admin', sysdate(), '关系建模级联规则');
+insert into sys_dict_data values(2200, 1, '阻止删除', 'RESTRICT', 'mdm_cascade_rule', '', 'default', 'N', '0', 'admin', sysdate(), 'admin', sysdate(), null);
+insert into sys_dict_data values(2201, 2, '置空',     'SET_NULL', 'mdm_cascade_rule', '', 'default', 'N', '0', 'admin', sysdate(), 'admin', sysdate(), null);
+insert into sys_dict_data values(2202, 3, '级联删除', 'CASCADE',  'mdm_cascade_rule', '', 'default', 'N', '0', 'admin', sysdate(), 'admin', sysdate(), null);

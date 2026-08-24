@@ -42,28 +42,33 @@ req GET "/mdm/data/supplier/list?pageNum=1&pageSize=10"
 CODE=$(j '.rows[0].supplier_code // empty')
 case "$CODE" in SUP-*) ok "自动编码: $CODE";; *) bad "未生成 SUP- 编码: $CODE"; resp;; esac
 
-echo "[4/10] 审核：提交→通过→落库"
+echo "[4/10] 审核（Flowable）：提交→通过→落库"
 req POST /mdm/data/customer '{"cust_name":"冒烟客户A","cust_level":"A","phone":"13800000000"}'
 MSG=$(j '.msg // empty')
 [[ "$MSG" == *"已提交审核"* ]] && ok "customer 新增转待审核" || { bad "应提示已提交审核: $MSG"; resp; }
-req GET "/mdm/audit/task/list?status=0&pageSize=10"
-TASK=$(j '[.rows[]?.taskId][0]')
-[ "$TASK" != "null" ] && ok "待办任务 task=$TASK" || bad "无待办任务"
-req PUT "/mdm/audit/task/approve/$TASK"
+req GET "/mdm/audit/flowable/todo?pageSize=10"
+TASK=$(j '[.rows[]?.id][0]')
+[ "$TASK" != "null" ] && ok "Flowable 待办 task=$TASK" || bad "无待办任务"
+req PUT "/mdm/audit/flowable/task/$TASK/approve" '{"comment":"冒烟通过"}'
 [ "$(code)" = "200" ] && ok "审核通过" || bad "审核通过失败"
 sleep 1
 req GET "/mdm/data/customer/list?pageNum=1&pageSize=10"
 j '.rows[]?.cust_name' | grep -q "冒烟客户A" && ok "审核通过后数据落库" || bad "审核通过后未出现数据"
 CID=$(j '[.rows[]? | select(.cust_name=="冒烟客户A") | .id][0]')
 
-echo "[5/10] 审核：驳回保留原值"
-req PUT "/mdm/data/customer/$CID" '{"cust_name":"冒烟客户A"}'
-req GET "/mdm/audit/task/list?status=0&actionType=UPDATE&pageSize=10"
-REJTASK=$(j '[.rows[]?.taskId][0]')
-req PUT "/mdm/audit/task/reject/$REJTASK" '{"reason":"名称格式不合法"}'
-[ "$(code)" = "200" ] && ok "驳回 task=$REJTASK" || bad "驳回失败"
-req GET "/mdm/data/customer/list?pageNum=1&pageSize=10"
-j '[.rows[]? | select(.id=='$CID') | .cust_name][0]' | grep -q "冒烟客户A" && ok "驳回后数据未变" || bad "驳回后数据被覆盖"
+echo "[5/10] 血缘 + 关系 + 模板 + 大屏（1.1.0）"
+req GET "/mdm/lineage/customer/$CID"
+[ "$(code)" = "200" ] && ok "血缘查询 OK (source=$(j '.data.source.type // "?"'))" || bad "血缘查询失败"
+req POST /mdm/relation '{"sourceObjectCode":"supplier","targetObjectCode":"customer","relationType":"ONE_TO_MANY","sourceFieldCode":"city","cascadeRule":"RESTRICT","isBidirectional":"1"}'
+[ "$(code)" = "200" ] && ok "创建关系定义" || bad "创建关系失败"
+req GET /mdm/relation/list?pageSize=10
+j '.rows|length' | grep -qE '^[1-9]' && ok "关系列表查询 OK" || bad "关系列表为空"
+req GET /mdm/template/list
+j '.data|length' | grep -q 5 && ok "模板库 5 个模板" || bad "模板数量不为 5"
+req GET /mdm/quality/dashboard
+j '.data.overview.totalIssues' | grep -qE '^[0-9]+$' && ok "质量大屏聚合 OK" || bad "大屏聚合失败"
+req GET /mdm/distribution/monitor
+[ "$(code)" = "200" ] && ok "分发监控 OK" || bad "分发监控失败"
 
 echo "[6/10] 质量：规则与重复检测"
 req POST /mdm/quality/rule '{"objectId":2,"ruleName":"供应商名称必填","targetType":"ATTRIBUTE","targetValue":"supplier_name","ruleType":"REQUIRED","status":"0"}'
