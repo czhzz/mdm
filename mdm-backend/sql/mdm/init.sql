@@ -329,3 +329,58 @@ create table mdm_distribution_record (
   primary key (record_id),
   key idx_app_status (app_id, status)
 ) engine=innodb auto_increment=1 comment = '主数据分发记录表';
+
+-- ----------------------------
+-- 5. 主数据关系建模表（1.1.0）
+-- ----------------------------
+drop table if exists mdm_relation;
+create table mdm_relation (
+  id                bigint(20)      not null auto_increment    comment '关系ID',
+  source_object_code varchar(64)    not null                   comment '源对象编码',
+  target_object_code varchar(64)    not null                   comment '目标对象编码',
+  relation_type     varchar(16)     not null                   comment '关系类型（ONE_TO_ONE/ONE_TO_MANY/MANY_TO_MANY）',
+  source_field_code varchar(64)     default null               comment '源对象引用属性编码',
+  cascade_rule      varchar(16)     default 'RESTRICT'         comment '级联规则（RESTRICT阻止删除/SET_NULL置空/CASCADE级联删除）',
+  is_bidirectional  char(1)         default '0'                comment '是否双向（0否 1是）',
+  create_by         varchar(64)     default ''                 comment '创建者',
+  create_time       datetime                                   comment '创建时间',
+  update_by         varchar(64)     default ''                 comment '更新者',
+  update_time       datetime                                   comment '更新时间',
+  primary key (id),
+  unique key uk_source_target (source_object_code, target_object_code)
+) engine=innodb auto_increment=1 comment = '主数据对象关系定义表';
+
+-- 1.1.0 列扩展：mdm_attribute（引用对象）
+drop procedure if exists mdm_alter_columns;
+delimiter $$
+create procedure mdm_alter_columns()
+begin
+  if not exists (select 1 from information_schema.columns where table_schema=database() and table_name='mdm_attribute' and column_name='ref_object_code') then
+    alter table mdm_attribute add column ref_object_code varchar(64) default null comment '引用目标对象编码' after enum_values;
+  end if;
+  if not exists (select 1 from information_schema.columns where table_schema=database() and table_name='mdm_attribute' and column_name='ref_display') then
+    alter table mdm_attribute add column ref_display varchar(255) default null comment '引用显示字段（逗号分隔）' after ref_object_code;
+  end if;
+
+  -- 1.1.0 列扩展：mdm_object（审核流程 + 模板来源）
+  if not exists (select 1 from information_schema.columns where table_schema=database() and table_name='mdm_object' and column_name='audit_process_key') then
+    alter table mdm_object add column audit_process_key varchar(64) default null comment 'Flowable审核流程Key' after version;
+  end if;
+  if not exists (select 1 from information_schema.columns where table_schema=database() and table_name='mdm_object' and column_name='template_source') then
+    alter table mdm_object add column template_source varchar(64) default null comment '模板来源（模板编码）' after audit_process_key;
+  end if;
+
+  -- 1.1.0 列扩展：mdm_distribution（分发方式）
+  if not exists (select 1 from information_schema.columns where table_schema=database() and table_name='mdm_distribution' and column_name='channel') then
+    alter table mdm_distribution add column channel varchar(8) default 'HTTP' comment '分发方式（HTTP/MQ）' after trigger_type;
+  end if;
+  if not exists (select 1 from information_schema.columns where table_schema=database() and table_name='mdm_distribution' and column_name='queue_name') then
+    alter table mdm_distribution add column queue_name varchar(128) default null comment 'MQ队列名称' after channel;
+  end if;
+end$$
+delimiter ;
+call mdm_alter_columns();
+drop procedure if exists mdm_alter_columns;
+
+-- 1.1.0 字典：数据类型新增"引用"
+insert into sys_dict_data values(2199, 8, '引用', 'ref', 'mdm_data_type', '', 'default', 'N', '0', 'admin', sysdate(), 'admin', sysdate(), null) on duplicate key update dict_label='引用';

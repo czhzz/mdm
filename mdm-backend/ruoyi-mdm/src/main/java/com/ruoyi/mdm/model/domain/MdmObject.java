@@ -38,6 +38,12 @@ public class MdmObject extends BaseEntity
     @Excel(name = "版本号")
     private String version;
 
+    /** Flowable审核流程Key */
+    private String auditProcessKey;
+
+    /** 模板来源（模板编码） */
+    private String templateSource;
+
     /** 显示顺序 */
     @Excel(name = "显示顺序")
     private Integer orderNum;
@@ -106,6 +112,26 @@ public class MdmObject extends BaseEntity
         this.version = version;
     }
 
+    public String getAuditProcessKey()
+    {
+        return auditProcessKey;
+    }
+
+    public void setAuditProcessKey(String auditProcessKey)
+    {
+        this.auditProcessKey = auditProcessKey;
+    }
+
+    public String getTemplateSource()
+    {
+        return templateSource;
+    }
+
+    public void setTemplateSource(String templateSource)
+    {
+        this.templateSource = templateSource;
+    }
+
     public Integer getOrderNum()
     {
         return orderNum;
@@ -125,6 +151,8 @@ public class MdmObject extends BaseEntity
             .append("categoryId", getCategoryId())
             .append("status", getStatus())
             .append("version", getVersion())
+            .append("auditProcessKey", getAuditProcessKey())
+            .append("templateSource", getTemplateSource())
             .append("orderNum", getOrderNum())
             .append("createBy", getCreateBy())
             .append("createTime", getCreateTime())

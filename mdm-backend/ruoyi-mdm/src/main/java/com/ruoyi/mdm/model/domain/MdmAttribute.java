@@ -58,6 +58,12 @@ public class MdmAttribute extends BaseEntity
     /** 枚举值（逗号分隔） */
     private String enumValues;
 
+    /** 引用目标对象编码 */
+    private String refObjectCode;
+
+    /** 引用显示字段（逗号分隔） */
+    private String refDisplay;
+
     /** 默认值 */
     private String defaultValue;
 
@@ -201,6 +207,26 @@ public class MdmAttribute extends BaseEntity
         this.enumValues = enumValues;
     }
 
+    public String getRefObjectCode()
+    {
+        return refObjectCode;
+    }
+
+    public void setRefObjectCode(String refObjectCode)
+    {
+        this.refObjectCode = refObjectCode;
+    }
+
+    public String getRefDisplay()
+    {
+        return refDisplay;
+    }
+
+    public void setRefDisplay(String refDisplay)
+    {
+        this.refDisplay = refDisplay;
+    }
+
     public String getDefaultValue()
     {
         return defaultValue;
@@ -247,6 +273,8 @@ public class MdmAttribute extends BaseEntity
             .append("minValue", getMinValue())
             .append("maxValue", getMaxValue())
             .append("enumValues", getEnumValues())
+            .append("refObjectCode", getRefObjectCode())
+            .append("refDisplay", getRefDisplay())
             .append("defaultValue", getDefaultValue())
             .append("orderNum", getOrderNum())
             .append("status", getStatus())

@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.mdm.relation.mapper.MdmRelationMapper">
+
+    <resultMap type="MdmRelation" id="MdmRelationResult">
+        <result property="id"              column="id"              />
+        <result property="sourceObjectCode" column="source_object_code" />
+        <result property="targetObjectCode" column="target_object_code" />
+        <result property="relationType"    column="relation_type"    />
+        <result property="sourceFieldCode" column="source_field_code" />
+        <result property="cascadeRule"     column="cascade_rule"     />
+        <result property="isBidirectional" column="is_bidirectional" />
+        <result property="createBy"        column="create_by"        />
+        <result property="createTime"      column="create_time"      />
+        <result property="updateBy"        column="update_by"        />
+        <result property="updateTime"      column="update_time"      />
+    </resultMap>
+
+    <sql id="selectMdmRelationVo">
+        select id, source_object_code, target_object_code, relation_type, source_field_code,
+               cascade_rule, is_bidirectional, create_by, create_time, update_by, update_time
+        from mdm_relation
+    </sql>
+
+    <select id="selectMdmRelationList" parameterType="MdmRelation" resultMap="MdmRelationResult">
+        <include refid="selectMdmRelationVo"/>
+        <where>
+            <if test="sourceObjectCode != null and sourceObjectCode != ''">
+                and source_object_code = #{sourceObjectCode}
+            </if>
+            <if test="targetObjectCode != null and targetObjectCode != ''">
+                and target_object_code = #{targetObjectCode}
+            </if>
+        </where>
+        order by id desc
+    </select>
+
+    <select id="selectMdmRelationById" parameterType="Long" resultMap="MdmRelationResult">
+        <include refid="selectMdmRelationVo"/>
+        where id = #{id}
+    </select>
+
+    <select id="selectBySourceObject" resultMap="MdmRelationResult">
+        <include refid="selectMdmRelationVo"/>
+        where source_object_code = #{sourceObjectCode}
+    </select>
+
+    <select id="selectByTargetObject" resultMap="MdmRelationResult">
+        <include refid="selectMdmRelationVo"/>
+        where target_object_code = #{targetObjectCode}
+    </select>
+
+    <insert id="insertMdmRelation" parameterType="MdmRelation" useGeneratedKeys="true" keyProperty="id">
+        insert into mdm_relation (
+            source_object_code, target_object_code, relation_type, source_field_code,
+            cascade_rule, is_bidirectional, create_by, create_time
+        ) values (
+            #{sourceObjectCode}, #{targetObjectCode}, #{relationType}, #{sourceFieldCode},
+            #{cascadeRule}, #{isBidirectional}, #{createBy}, sysdate()
+        )
+    </insert>
+
+    <update id="updateMdmRelation" parameterType="MdmRelation">
+        update mdm_relation
+        <set>
+            <if test="sourceObjectCode != null">source_object_code = #{sourceObjectCode},</if>
+            <if test="targetObjectCode != null">target_object_code = #{targetObjectCode},</if>
+            <if test="relationType != null">relation_type = #{relationType},</if>
+            <if test="sourceFieldCode != null">source_field_code = #{sourceFieldCode},</if>
+            <if test="cascadeRule != null">cascade_rule = #{cascadeRule},</if>
+            <if test="isBidirectional != null">is_bidirectional = #{isBidirectional},</if>
+            update_by = #{updateBy}, update_time = sysdate()
+        </set>
+        where id = #{id}
+    </update>
+
+    <delete id="deleteMdmRelationById" parameterType="Long">
+        delete from mdm_relation where id = #{id}
+    </delete>
+
+    <delete id="deleteMdmRelationByIds" parameterType="Long">
+        delete from mdm_relation where id in
+        <foreach collection="array" item="id" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </delete>
+
+</mapper>

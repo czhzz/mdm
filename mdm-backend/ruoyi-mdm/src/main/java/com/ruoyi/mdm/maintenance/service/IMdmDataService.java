@@ -95,4 +95,14 @@ public interface IMdmDataService
      * @return 结果
      */
     public int applyAuditUpdate(String objectCode, Long id, Map<String, Object> data);
+
+    /**
+     * 查询引用数据列表（供前端下拉选择）
+     *
+     * @param refObjectCode 被引用的对象编码
+     * @param displayFields 显示字段（逗号分隔）
+     * @param keyword 搜索关键字
+     * @return 数据列表（id, object_code, display）
+     */
+    public List<Map<String, Object>> selectRefDataList(String refObjectCode, String displayFields, String keyword);
 }

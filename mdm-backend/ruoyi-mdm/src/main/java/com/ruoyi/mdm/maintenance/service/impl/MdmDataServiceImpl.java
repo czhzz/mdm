@@ -28,6 +28,9 @@ import com.ruoyi.mdm.model.mapper.MdmAttributeMapper;
 import com.ruoyi.mdm.model.mapper.MdmObjectMapper;
 import com.ruoyi.mdm.quality.domain.MdmQualityRule;
 import com.ruoyi.mdm.quality.mapper.MdmQualityRuleMapper;
+import com.ruoyi.mdm.relation.domain.MdmRelation;
+import com.ruoyi.mdm.relation.mapper.MdmRelationMapper;
+import com.ruoyi.mdm.relation.service.IMdmRelationService;
 
 /**
  * 主数据动态数据 服务层实现
@@ -60,6 +63,12 @@ public class MdmDataServiceImpl implements IMdmDataService
 
     @Autowired
     private IDistributionService distributionService;
+
+    @Autowired
+    private MdmRelationMapper relationMapper;
+
+    @Autowired
+    private IMdmRelationService relationService;
 
     @Override
     public List<Map<String, Object>> selectDataList(String objectCode, Map<String, Object> query, int pageNum, int pageSize)
@@ -148,6 +157,35 @@ public class MdmDataServiceImpl implements IMdmDataService
     public int deleteDataByIds(String objectCode, Long[] ids)
     {
         MdmTable table = resolveTable(objectCode);
+        // 级联检查：查询所有以本对象为目标的 RESTRICT 关系
+        MdmRelation query = new MdmRelation();
+        query.setTargetObjectCode(objectCode);
+        query.setCascadeRule("RESTRICT");
+        List<MdmRelation> restrictRelations = relationMapper.selectByTargetObject(objectCode);
+        for (MdmRelation rel : restrictRelations)
+        {
+            if ("RESTRICT".equals(rel.getCascadeRule()) && StringUtils.isNotEmpty(rel.getSourceFieldCode()))
+            {
+                String srcTable = "mdm_data_" + rel.getSourceObjectCode();
+                for (Long id : ids)
+                {
+                    // 获取被删除数据的编码值
+                    Map<String, Object> row = jdbcTemplate.queryForMap(
+                            "SELECT object_code FROM " + table.tableName + " WHERE id = ?", id);
+                    if (row != null && row.get("object_code") != null)
+                    {
+                        Long refCount = jdbcTemplate.queryForObject(
+                                "SELECT COUNT(1) FROM " + srcTable + " WHERE " + rel.getSourceFieldCode() + " = ?",
+                                Long.class, String.valueOf(row.get("object_code")));
+                        if (refCount != null && refCount > 0)
+                        {
+                            throw new ServiceException("数据被对象【" + rel.getSourceObjectCode()
+                                    + "】引用，无法删除（级联规则：RESTRICT）");
+                        }
+                    }
+                }
+            }
+        }
         StringBuilder sql = new StringBuilder("DELETE FROM ").append(table.tableName).append(" WHERE id IN (");
         for (int i = 0; i < ids.length; i++)
         {
@@ -182,6 +220,40 @@ public class MdmDataServiceImpl implements IMdmDataService
     public int applyAuditUpdate(String objectCode, Long id, Map<String, Object> data)
     {
         return updateData(objectCode, id, data);
+    }
+
+    @Override
+    @Override
+    public List<Map<String, Object>> selectRefDataList(String refObjectCode, String displayFields, String keyword)
+    {
+        if (!isValidIdentifier(refObjectCode))
+        {
+            throw new ServiceException("引用对象编码包含非法字符");
+        }
+        String tableName = "mdm_data_" + refObjectCode;
+        StringBuilder sql = new StringBuilder("SELECT id, object_code, ");
+        if (StringUtils.isNotEmpty(displayFields))
+        {
+            // 只选取合法字段，防止注入
+            for (String field : displayFields.split(","))
+            {
+                String f = field.trim();
+                if (isValidIdentifier(f))
+                {
+                    sql.append(f).append(", ");
+                }
+            }
+        }
+        sql.append("object_code AS display FROM ").append(tableName);
+        sql.append(" WHERE status = '1'");
+        List<Object> args = new ArrayList<>();
+        if (StringUtils.isNotEmpty(keyword))
+        {
+            sql.append(" AND object_code LIKE ?");
+            args.add("%" + keyword + "%");
+        }
+        sql.append(" ORDER BY id DESC LIMIT 50");
+        return jdbcTemplate.queryForList(sql.toString(), args.toArray());
     }
 
     @Override
@@ -351,6 +423,25 @@ public class MdmDataServiceImpl implements IMdmDataService
                     && !dictDataExists(attr.getDictType(), strVal))
             {
                 throw new ServiceException("属性【" + attr.getAttrName() + "】值不在标准字典中：" + strVal);
+            }
+            // 引用校验：检查引用值是否存在于目标对象数据表中
+            if (StringUtils.isNotEmpty(attr.getRefObjectCode()) && StringUtils.isNotEmpty(strVal))
+            {
+                if (!isValidIdentifier(attr.getRefObjectCode()))
+                {
+                    throw new ServiceException("引用目标对象编码包含非法字符：" + attr.getRefObjectCode());
+                }
+                String refTable = "mdm_data_" + attr.getRefObjectCode();
+                // 尝试用编码字段匹配（目标表中 object_code 列或同名属性列）
+                String refCol = "object_code";
+                // ponytail: 优先用 object_code 匹配，若引用的是属性值需额外配置，当前简单场景够用
+                Long refCount = jdbcTemplate.queryForObject(
+                        "SELECT COUNT(1) FROM " + refTable + " WHERE " + refCol + " = ?",
+                        Long.class, strVal);
+                if (refCount == null || refCount == 0)
+                {
+                    throw new ServiceException("属性【" + attr.getAttrName() + "】引用的数据不存在：" + strVal);
+                }
             }
             // 数值范围
             if ("range".equals(attr.getSourceType()) && StringUtils.isNotEmpty(attr.getMinValue() + attr.getMaxValue()))

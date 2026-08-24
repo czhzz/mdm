@@ -17,6 +17,8 @@ public class MdmDistribution extends BaseEntity
     private Long appId;
     private Long objectId;
     private String triggerType;
+    private String channel;
+    private String queueName;
     private String endpointUrl;
     private String enabled;
     private String remark;
@@ -62,6 +64,26 @@ public class MdmDistribution extends BaseEntity
     public void setTriggerType(String triggerType)
     {
         this.triggerType = triggerType;
+    }
+
+    public String getChannel()
+    {
+        return channel;
+    }
+
+    public void setChannel(String channel)
+    {
+        this.channel = channel;
+    }
+
+    public String getQueueName()
+    {
+        return queueName;
+    }
+
+    public void setQueueName(String queueName)
+    {
+        this.queueName = queueName;
     }
 
     public String getEndpointUrl()
@@ -124,6 +146,8 @@ public class MdmDistribution extends BaseEntity
                 .append("appId", getAppId())
                 .append("objectId", getObjectId())
                 .append("triggerType", getTriggerType())
+                .append("channel", getChannel())
+                .append("queueName", getQueueName())
                 .append("enabled", getEnabled())
                 .toString();
     }
