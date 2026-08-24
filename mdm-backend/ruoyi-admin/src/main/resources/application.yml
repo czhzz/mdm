@@ -134,3 +134,35 @@ xss:
   excludes: /system/notice
   # 匹配链接
   urlPatterns: /system/*,/monitor/*,/tool/*
+
+# Flowable 流程引擎配置
+flowable:
+  # 关闭异步历史（简化部署，按需开启）
+  async-executor-activate: false
+  # 数据库 schema 自动更新
+  database-schema-update: true
+  # 关闭 IDM 引擎（复用若依用户体系）
+  idm-engine-configurator:
+    enabled: false
+  # 流程定义文件位置
+  process-definition-location-prefix: classpath:/processes/
+
+# RabbitMQ 配置
+spring:
+  rabbitmq:
+    host: ${RABBITMQ_HOST:localhost}
+    port: ${RABBITMQ_PORT:5672}
+    username: ${RABBITMQ_USERNAME:guest}
+    password: ${RABBITMQ_PASSWORD:guest}
+    virtual-host: ${RABBITMQ_VHOST:/}
+    # 发布确认
+    publisher-confirm-type: correlated
+    # 发送失败退回
+    publisher-returns: true
+    listener:
+      simple:
+        # 手动 ACK
+        acknowledge-mode: manual
+        # 并发消费数
+        concurrency: 2
+        max-concurrency: 5
