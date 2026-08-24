@@ -39,6 +39,9 @@ pnpm-debug.log*
 .env.local
 .env.*.local
 
+# ---- 上传文件 ----
+uploadPath/
+
 # ---- 日志与临时文件 ----
 logs/
 tmp/

@@ -37,6 +37,9 @@ nbdist/
 .nb-gradle/
 
 ######################################################################
+# ---- 上传文件 ----
+uploadPath/
+
 # Others
 *.log
 *.xml.versionsBackup
