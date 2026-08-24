@@ -87,6 +87,24 @@ spring:
         max-active: 8
         # #连接池最大阻塞等待时间（使用负值表示没有限制）
         max-wait: -1ms
+  # rabbitmq 配置（1.1.0 分发 MQ 通道）
+  rabbitmq:
+    host: ${RABBITMQ_HOST:localhost}
+    port: ${RABBITMQ_PORT:5672}
+    username: ${RABBITMQ_USERNAME:guest}
+    password: ${RABBITMQ_PASSWORD:guest}
+    virtual-host: ${RABBITMQ_VHOST:/}
+    # 发布确认
+    publisher-confirm-type: correlated
+    # 发送失败退回
+    publisher-returns: true
+    listener:
+      simple:
+        # 手动 ACK
+        acknowledge-mode: manual
+        # 并发消费数
+        concurrency: 2
+        max-concurrency: 5
 
 # token配置
 token:
@@ -146,23 +164,3 @@ flowable:
     enabled: false
   # 流程定义文件位置
   process-definition-location-prefix: classpath:/processes/
-
-# RabbitMQ 配置
-spring:
-  rabbitmq:
-    host: ${RABBITMQ_HOST:localhost}
-    port: ${RABBITMQ_PORT:5672}
-    username: ${RABBITMQ_USERNAME:guest}
-    password: ${RABBITMQ_PASSWORD:guest}
-    virtual-host: ${RABBITMQ_VHOST:/}
-    # 发布确认
-    publisher-confirm-type: correlated
-    # 发送失败退回
-    publisher-returns: true
-    listener:
-      simple:
-        # 手动 ACK
-        acknowledge-mode: manual
-        # 并发消费数
-        concurrency: 2
-        max-concurrency: 5
