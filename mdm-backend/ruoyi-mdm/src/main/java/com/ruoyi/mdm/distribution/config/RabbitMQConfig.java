@@ -74,6 +74,13 @@ public class RabbitMQConfig
         return template;
     }
 
+    /** RabbitAdmin 用于动态声明订阅方队列（Spring Boot 不会自动创建） */
+    @Bean
+    public RabbitAdmin rabbitAdmin(ConnectionFactory connectionFactory)
+    {
+        return new RabbitAdmin(connectionFactory);
+    }
+
     /**
      * 动态声明订阅方队列（分发配置启用 MQ 通道时调用）
      */
