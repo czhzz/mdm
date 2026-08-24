@@ -56,7 +56,8 @@ public class MdmDistributionController extends BaseController
     @PostMapping("/app")
     public AjaxResult addApp(@RequestBody MdmApp mdmApp)
     {
-        return toAjax(distributionService.addApp(mdmApp));
+        // 返回创建后的应用（含一次性的 appid/secret 供前端展示保存）
+        return success(distributionService.addApp(mdmApp));
     }
 
     @PreAuthorize("@ss.hasPermi('mdm:distribution:edit')")

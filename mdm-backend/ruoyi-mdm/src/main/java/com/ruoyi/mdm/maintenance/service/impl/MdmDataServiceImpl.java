@@ -109,7 +109,7 @@ public class MdmDataServiceImpl implements IMdmDataService
                 data.put(rule.getCodeField(), codeRuleService.generateCode(rule, data));
             }
         }
-        validateData(table, data, null);
+        validateData(table, data, null, null);
         Long pk = doInsert(table, objectCode, "0", pickColumns(table, data));
         distributionService.triggerPush(objectCode, pk, "INSERT", data);
         return pk > 0 ? 1 : 0;
@@ -119,7 +119,7 @@ public class MdmDataServiceImpl implements IMdmDataService
     public int updateData(String objectCode, Long id, Map<String, Object> data)
     {
         MdmTable table = resolveTable(objectCode);
-        validateData(table, data, id);
+        validateData(table, data, id, data.keySet());
         List<String> sets = new ArrayList<>();
         List<Object> vals = new ArrayList<>();
         for (Map.Entry<String, Object> e : data.entrySet())
@@ -172,7 +172,7 @@ public class MdmDataServiceImpl implements IMdmDataService
                 data.put(rule.getCodeField(), codeRuleService.generateCode(rule, data));
             }
         }
-        validateData(table, data, null);
+        validateData(table, data, null, null);
         Long pk = doInsert(table, objectCode, "1", pickColumns(table, data));
         distributionService.triggerPush(objectCode, pk, "INSERT", data);
         return pk > 0 ? 1 : 0;
@@ -318,15 +318,16 @@ public class MdmDataServiceImpl implements IMdmDataService
     /**
      * 服务端校验：必填 / 唯一 / 枚举 / 数值范围
      */
-    private void validateData(MdmTable table, Map<String, Object> data, Long excludeId)
+    private void validateData(MdmTable table, Map<String, Object> data, Long excludeId, Set<String> submitted)
     {
         for (MdmAttribute attr : table.attributes)
         {
             String key = attr.getAttrCode();
             Object val = data.get(key);
             String strVal = val == null ? null : String.valueOf(val).trim();
-            // 必填
-            if ("Y".equals(attr.getRequiredFlag()) && StringUtils.isEmpty(strVal))
+            // 必填：仅校验提交字段（更新走部分字段时，未提交字段视为保持不变）
+            if ("Y".equals(attr.getRequiredFlag()) && (submitted == null || submitted.contains(key))
+                    && StringUtils.isEmpty(strVal))
             {
                 throw new ServiceException("属性【" + attr.getAttrName() + "】不能为空");
             }
@@ -386,7 +387,10 @@ public class MdmDataServiceImpl implements IMdmDataService
             {
                 throw new ServiceException("【" + rule.getTargetValue() + "】" + msg);
             }
-            if ("REQUIRED".equals(rule.getRuleType()) && StringUtils.isEmpty(ruleValue))
+            // 必填规则同样仅校验提交字段（部分更新时未提交字段视为不变）
+            if ("REQUIRED".equals(rule.getRuleType()) && StringUtils.isEmpty(ruleValue)
+                    && (submitted == null || StringUtils.isEmpty(rule.getTargetValue())
+                            || submitted.contains(rule.getTargetValue())))
             {
                 throw new ServiceException(msg);
             }

@@ -22,8 +22,8 @@ public interface IDistributionService
     /** 按 appid 查询（对外接口鉴权用） */
     public MdmApp getAppByAppid(String appid);
 
-    /** 新增并生成 appid/secret */
-    public int addApp(MdmApp mdmApp);
+    /** 新增并生成 appid/secret，返回含凭据的应用（凭据仅此一次可见） */
+    public MdmApp addApp(MdmApp mdmApp);
 
     public int editApp(MdmApp mdmApp);
 

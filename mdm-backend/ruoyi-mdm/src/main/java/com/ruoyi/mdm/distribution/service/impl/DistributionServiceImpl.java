@@ -75,7 +75,7 @@ public class DistributionServiceImpl implements IDistributionService
     }
 
     @Override
-    public int addApp(MdmApp mdmApp)
+    public MdmApp addApp(MdmApp mdmApp)
     {
         if (StringUtils.isEmpty(mdmApp.getAppName()))
         {
@@ -83,9 +83,11 @@ public class DistributionServiceImpl implements IDistributionService
         }
         mdmApp.setAppid("app_" + IdUtils.fastSimpleUUID().substring(0, 16));
         mdmApp.setSecret("sk_" + IdUtils.fastSimpleUUID());
-        mdmApp.setEnabled(StringUtils.isEmpty(mdmApp.getEnabled()) ? "0" : mdmApp.getEnabled());
+        // 新增订阅方默认启用，便于立即接入
+        mdmApp.setEnabled(StringUtils.isEmpty(mdmApp.getEnabled()) ? "1" : mdmApp.getEnabled());
         mdmApp.setCreateBy(SecurityUtils.getUsername());
-        return appMapper.insertApp(mdmApp);
+        appMapper.insertApp(mdmApp);
+        return mdmApp;
     }
 
     @Override
@@ -175,6 +177,19 @@ public class DistributionServiceImpl implements IDistributionService
         if (record == null)
         {
             throw new ServiceException("分发记录不存在");
+        }
+        // 重推优先使用当前配置回调地址（如订阅方已修好），而非记录里的历史死地址
+        MdmObject object = objectMapper.checkObjectCodeUnique(record.getObjectCode());
+        if (object != null)
+        {
+            for (MdmDistribution cfg : distMapper.selectEnabledListByObjectId(object.getObjectId()))
+            {
+                if (cfg.getAppId().equals(record.getAppId()) && StringUtils.isNotEmpty(cfg.getEndpointUrl()))
+                {
+                    record.setEndpointUrl(cfg.getEndpointUrl());
+                    break;
+                }
+            }
         }
         // 手动重推：同步等待结果，方便前端直接反馈
         return send(record, true) ? 1 : 0;

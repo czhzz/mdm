@@ -116,8 +116,8 @@ create table mdm_code_rule_segment (
 -- 4. 菜单与权限
 -- ----------------------------
 -- 清理已存在的 mdm 菜单（保证脚本可重复执行）
-delete from sys_role_menu where menu_id between 2000 and 2027;
-delete from sys_menu where menu_id between 2000 and 2027;
+delete from sys_role_menu where menu_id between 2000 and 2035;
+delete from sys_menu where menu_id between 2000 and 2035;
 -- 一级目录
 insert into sys_menu values('2000', '主数据管理', '0', '10', 'mdm',            null,                    '', '', 1, 0, 'M', '0', '0', '',                    'tree-table', 'admin', sysdate(), '', null, '主数据管理目录');
 -- 二级菜单
@@ -152,10 +152,23 @@ insert into sys_menu values('2025', '规则修改', '2002', '3', '', null, '', '
 insert into sys_menu values('2026', '规则删除', '2002', '4', '', null, '', '', 1, 0, 'F', '0', '0', 'mdm:coderule:remove','#', 'admin', sysdate(), '', null, '');
 -- 审核菜单（复用数据维护按钮权限）
 insert into sys_menu values('2027', '审核', '2000', '7', 'audit', 'mdm/audit/index', '', '', 1, 0, 'C', '0', '0', 'mdm:maintenance:list', 'example', 'admin', sysdate(), '', null, '审核任务菜单');
+-- 数据质量按钮权限
+insert into sys_menu values('2028', '质量查询', '2005', '1', '', null, '', '', 1, 0, 'F', '0', '0', 'mdm:quality:query',  '#', 'admin', sysdate(), '', null, '');
+insert into sys_menu values('2029', '质量新增', '2005', '2', '', null, '', '', 1, 0, 'F', '0', '0', 'mdm:quality:add',    '#', 'admin', sysdate(), '', null, '');
+insert into sys_menu values('2030', '质量修改', '2005', '3', '', null, '', '', 1, 0, 'F', '0', '0', 'mdm:quality:edit',   '#', 'admin', sysdate(), '', null, '');
+insert into sys_menu values('2031', '质量删除', '2005', '4', '', null, '', '', 1, 0, 'F', '0', '0', 'mdm:quality:remove', '#', 'admin', sysdate(), '', null, '');
+-- 数据分发按钮权限
+insert into sys_menu values('2032', '分发查询', '2006', '1', '', null, '', '', 1, 0, 'F', '0', '0', 'mdm:distribution:query', '#', 'admin', sysdate(), '', null, '');
+insert into sys_menu values('2033', '分发新增', '2006', '2', '', null, '', '', 1, 0, 'F', '0', '0', 'mdm:distribution:add',   '#', 'admin', sysdate(), '', null, '');
+insert into sys_menu values('2034', '分发修改', '2006', '3', '', null, '', '', 1, 0, 'F', '0', '0', 'mdm:distribution:edit',  '#', 'admin', sysdate(), '', null, '');
+insert into sys_menu values('2035', '分发删除', '2006', '4', '', null, '', '', 1, 0, 'F', '0', '0', 'mdm:distribution:remove','#', 'admin', sysdate(), '', null, '');
 
 -- ----------------------------
 -- 5. 种子字典
 -- ----------------------------
+-- 清理已存在的 mdm 种子字典（保证脚本可重复执行）
+delete from sys_dict_data where dict_code between 2000 and 2006;
+delete from sys_dict_type where dict_id = 200;
 -- 字典类型：主数据属性数据类型
 insert into sys_dict_type values(200, '主数据属性数据类型', 'mdm_data_type', '0', 'admin', sysdate(), 'admin', sysdate(), '主数据模型属性数据类型');
 insert into sys_dict_data values(2000, 1, '文本',   'text',     'mdm_data_type', '', 'default', 'N', '0', 'admin', sysdate(), 'admin', sysdate(), null);
