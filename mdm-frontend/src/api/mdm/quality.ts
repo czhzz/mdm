@@ -68,3 +68,13 @@ export function handleIssue(data: MdmQualityIssue): Promise<AjaxResult> {
     data
   })
 }
+
+// ===== 质量大屏（1.1.0） =====
+
+/** 获取质量大屏聚合数据 */
+export function getQualityDashboard(): Promise<AjaxResult<Record<string, unknown>>> {
+  return request({
+    url: '/mdm/quality/dashboard',
+    method: 'get'
+  })
+}

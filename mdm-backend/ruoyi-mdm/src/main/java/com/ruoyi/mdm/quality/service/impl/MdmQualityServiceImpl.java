@@ -1,6 +1,7 @@
 package com.ruoyi.mdm.quality.service.impl;
 
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -112,5 +113,58 @@ public class MdmQualityServiceImpl implements IMdmQualityService
             }
         }
         return groups;
+    }
+
+    @Override
+    public Map<String, Object> getDashboardData()
+    {
+        Map<String, Object> result = new LinkedHashMap<>();
+
+        // 1. 总览卡片
+        Long totalIssues = jdbcTemplate.queryForObject(
+                "SELECT COUNT(1) FROM mdm_quality_issue", Long.class);
+        Long pendingIssues = jdbcTemplate.queryForObject(
+                "SELECT COUNT(1) FROM mdm_quality_issue WHERE handle_status = '0'", Long.class);
+        Long handledIssues = jdbcTemplate.queryForObject(
+                "SELECT COUNT(1) FROM mdm_quality_issue WHERE handle_status IN ('1','2')", Long.class);
+        Long totalObjects = jdbcTemplate.queryForObject(
+                "SELECT COUNT(1) FROM mdm_object WHERE status = '1'", Long.class);
+        Map<String, Object> overview = new LinkedHashMap<>();
+        overview.put("totalIssues", totalIssues);
+        overview.put("pendingIssues", pendingIssues);
+        overview.put("handledIssues", handledIssues);
+        overview.put("totalObjects", totalObjects);
+        result.put("overview", overview);
+
+        // 2. 问题趋势（近 30 天，按日）
+        List<Map<String, Object>> trend = jdbcTemplate.queryForList(
+                "SELECT DATE_FORMAT(create_time, '%Y-%m-%d') AS day, COUNT(1) AS cnt "
+                + "FROM mdm_quality_issue WHERE create_time >= DATE_SUB(NOW(), INTERVAL 30 DAY) "
+                + "GROUP BY DATE_FORMAT(create_time, '%Y-%m-%d') ORDER BY day");
+        result.put("trend", trend);
+
+        // 3. 问题类型分布
+        List<Map<String, Object>> typeDist = jdbcTemplate.queryForList(
+                "SELECT issue_type AS type, COUNT(1) AS cnt FROM mdm_quality_issue GROUP BY issue_type");
+        result.put("typeDist", typeDist);
+
+        // 4. 对象健康度排行（各对象的问题数，Top-10）
+        List<Map<String, Object>> objectRank = jdbcTemplate.queryForList(
+                "SELECT o.object_code AS objectCode, o.object_name AS objectName, "
+                + "COUNT(i.issue_id) AS issueCount "
+                + "FROM mdm_object o LEFT JOIN mdm_quality_issue i ON i.object_id = o.object_id "
+                + "WHERE o.status = '1' GROUP BY o.object_id, o.object_code, o.object_name "
+                + "ORDER BY issueCount DESC LIMIT 10");
+        result.put("objectRank", objectRank);
+
+        // 5. 最近问题列表（10 条）
+        List<Map<String, Object>> recentIssues = jdbcTemplate.queryForList(
+                "SELECT i.issue_id AS issueId, o.object_name AS objectName, i.issue_type AS issueType, "
+                + "i.issue_desc AS issueDesc, i.handle_status AS handleStatus, i.create_time AS createTime "
+                + "FROM mdm_quality_issue i LEFT JOIN mdm_object o ON o.object_id = i.object_id "
+                + "ORDER BY i.create_time DESC LIMIT 10");
+        result.put("recentIssues", recentIssues);
+
+        return result;
     }
 }

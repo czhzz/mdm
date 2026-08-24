@@ -56,7 +56,19 @@
               </el-tag>
             </template>
           </el-table-column>
-          <el-table-column label="回调地址" prop="endpointUrl" min-width="220" show-overflow-tooltip />
+          <el-table-column label="分发方式" width="90" align="center">
+            <template #default="scope">
+              <el-tag :type="(scope.row.channel || 'HTTP') === 'MQ' ? 'warning' : 'primary'" size="small">
+                {{ (scope.row.channel || 'HTTP') === 'MQ' ? 'MQ队列' : 'HTTP' }}
+              </el-tag>
+            </template>
+          </el-table-column>
+          <el-table-column label="回调地址/队列" prop="endpointUrl" min-width="220" show-overflow-tooltip>
+            <template #default="scope">
+              <span v-if="scope.row.channel === 'MQ'">{{ scope.row.queueName || 'mdm.dist.<对象编码>' }}</span>
+              <span v-else>{{ scope.row.endpointUrl }}</span>
+            </template>
+          </el-table-column>
           <el-table-column label="状态" width="80" align="center">
             <template #default="scope">
               <el-tag :type="scope.row.enabled === '1' ? 'success' : 'info'">
@@ -183,7 +195,16 @@
             <el-radio value="MANUAL">手动重推</el-radio>
           </el-radio-group>
         </el-form-item>
-        <el-form-item label="回调地址" prop="endpointUrl">
+        <el-form-item label="分发方式" prop="channel">
+          <el-radio-group v-model="distForm.channel">
+            <el-radio value="HTTP">HTTP 回调</el-radio>
+            <el-radio value="MQ">RabbitMQ 队列</el-radio>
+          </el-radio-group>
+        </el-form-item>
+        <el-form-item v-if="distForm.channel === 'MQ'" label="队列名称" prop="queueName">
+          <el-input v-model="distForm.queueName" placeholder="默认 mdm.dist.<对象编码>，可自定义" />
+        </el-form-item>
+        <el-form-item v-if="distForm.channel !== 'MQ'" label="回调地址" prop="endpointUrl">
           <el-input v-model="distForm.endpointUrl" placeholder="如 http://erp.example.com/mdm/push" />
         </el-form-item>
         <el-form-item label="启用">
@@ -301,7 +322,7 @@ const distTotal = ref(0);
 const distQuery = ref({ pageNum: 1, pageSize: 10 });
 const distOpen = ref(false);
 const distTitle = ref("");
-const distForm = ref<MdmDistribution>({ triggerType: "IMMEDIATE", enabled: "1" });
+const distForm = ref<MdmDistribution>({ triggerType: "IMMEDIATE", enabled: "1", channel: "HTTP" });
 const distRef = ref<FormInstance>();
 const distRules = {
   appId: [{ required: true, message: "请选择订阅应用", trigger: "change" }],
@@ -321,7 +342,7 @@ const getDistList = async () => {
 };
 
 const handleAddDist = () => {
-  distForm.value = { triggerType: "IMMEDIATE", enabled: "1" };
+  distForm.value = { triggerType: "IMMEDIATE", enabled: "1", channel: "HTTP" };
   distTitle.value = "新增分发配置";
   distOpen.value = true;
 };

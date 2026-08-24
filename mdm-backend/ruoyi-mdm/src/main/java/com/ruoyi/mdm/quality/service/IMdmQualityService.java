@@ -35,4 +35,11 @@ public interface IMdmQualityService
      * @return 重复数据组列表
      */
     public List<Map<String, Object>> duplicateCheck(String objectCode, List<String> fields);
+
+    /**
+     * 获取质量大屏聚合数据（1.1.0）
+     *
+     * @return 总览卡片 + 趋势 + 排行 + 规则分布 + 最近问题
+     */
+    public Map<String, Object> getDashboardData();
 }

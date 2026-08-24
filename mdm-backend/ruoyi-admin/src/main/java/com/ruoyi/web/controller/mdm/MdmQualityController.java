@@ -65,4 +65,14 @@ public class MdmQualityController extends BaseController
         List<String> fields = (List<String>) body.get("fields");
         return success(qualityService.duplicateCheck(objectCode, fields));
     }
+
+    /**
+     * 质量大屏聚合数据（1.1.0）
+     */
+    @PreAuthorize("@ss.hasPermi('mdm:quality:list')")
+    @GetMapping("/dashboard")
+    public AjaxResult dashboard()
+    {
+        return success(qualityService.getDashboardData());
+    }
 }

@@ -106,3 +106,12 @@ export function retryRecord(recordId: number): Promise<AjaxResult> {
     method: 'put'
   })
 }
+// ===== 分发监控（1.1.0） =====
+
+/** 获取 MQ 分发监控数据 */
+export function getDistributionMonitor(): Promise<AjaxResult<Record<string, unknown>>> {
+  return request({
+    url: '/mdm/distribution/monitor',
+    method: 'get'
+  })
+}
