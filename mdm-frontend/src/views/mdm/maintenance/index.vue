@@ -179,6 +179,13 @@
               @click="handleDelete(scope.row)"
               >删除</el-button
             >
+            <el-button
+              link
+              type="info"
+              icon="Connection"
+              @click="handleLineage(scope.row)"
+              >血缘</el-button
+            >
           </template>
         </el-table-column>
       </el-table>
@@ -262,6 +269,34 @@
         <el-button @click="cancel">取 消</el-button>
       </template>
     </el-dialog>
+
+    <!-- 血缘追踪对话框（1.1.0） -->
+    <el-dialog v-model="lineageOpen" title="数据血缘" width="720px" append-to-body>
+      <div v-if="lineage" class="lineage-box">
+        <div class="lineage-row">
+          <div class="lineage-node source">
+            <div class="node-title">{{ sourceTypeLabel(lineage.source?.type) }}</div>
+            <div class="node-desc">{{ lineage.source?.value || '未知来源' }}</div>
+            <div class="node-time">{{ lineage.source?.time }}</div>
+          </div>
+          <div class="lineage-arrow">→</div>
+          <div class="lineage-node current">
+            <div class="node-title">当前数据</div>
+            <div class="node-desc">{{ lineage.dataCode }}</div>
+          </div>
+          <template v-if="lineage.targets && lineage.targets.length">
+            <div class="lineage-arrow">→</div>
+            <div class="lineage-node targets">
+              <div class="node-title">下游系统（{{ lineage.targets.length }}）</div>
+              <div v-for="(t, i) in lineage.targets" :key="i" class="node-desc">
+                {{ t.appName }} <el-tag size="small" :type="t.success ? 'success' : 'danger'">{{ t.success ? '成功' : '失败' }}</el-tag>
+              </div>
+            </div>
+          </template>
+        </div>
+        <el-empty v-if="!lineage.targets || !lineage.targets.length" description="暂无下游消费记录" :image-size="60" />
+      </div>
+    </el-dialog>
   </div>
 </template>
 
@@ -271,6 +306,8 @@ import { ElMessage, ElMessageBox } from "element-plus";
 import type { FormInstance } from "element-plus";
 import type { MdmObject, MdmAttribute, MdmObjectMeta } from "@/types";
 import { listObject, getObjectMeta } from "@/api/mdm/model";
+import { getLineage } from "@/api/mdm/lineage";
+import type { LineageData } from "@/api/mdm/lineage";
 import {
   listData,
   addData,
@@ -297,6 +334,21 @@ const title = ref("");
 const queryParams = reactive<Record<string, any>>({ pageNum: 1, pageSize: 10 });
 const form = ref<Record<string, any>>({});
 const dataRef = ref<FormInstance>();
+
+const lineageOpen = ref(false);
+const lineage = ref<LineageData>();
+
+const sourceTypeLabel = (type?: string) => {
+  const map: Record<string, string> = { MANUAL: "手动录入", IMPORT: "Excel 导入", API: "API 推送", UNKNOWN: "未知来源" };
+  return map[type || "UNKNOWN"] || type || "未知来源";
+};
+
+const handleLineage = (row: Record<string, any>) => {
+  getLineage(objectCode.value, row.id).then(res => {
+    lineage.value = res.data;
+    lineageOpen.value = true;
+  });
+};
 
 const dataStatusOptions = [
   { value: "0", label: "草稿", elTagType: "info" },
@@ -461,3 +513,18 @@ const handleImport = async (options: { file: File }) => {
 
 loadObjects();
 </script>
+
+<style scoped>
+.lineage-box { padding: 8px 0; }
+.lineage-row { display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 8px; }
+.lineage-node {
+  border: 1px solid #dcdfe6; border-radius: 6px; padding: 10px 16px; min-width: 140px; text-align: center;
+}
+.lineage-node.source { border-color: #409eff; background: #ecf5ff; }
+.lineage-node.current { border-color: #67c23a; background: #f0f9eb; }
+.lineage-node.targets { border-color: #e6a23c; background: #fdf6ec; text-align: left; }
+.node-title { font-weight: bold; margin-bottom: 4px; }
+.node-desc { font-size: 13px; color: #606266; margin: 2px 0; }
+.node-time { font-size: 12px; color: #909399; }
+.lineage-arrow { font-size: 20px; color: #909399; }
+</style>

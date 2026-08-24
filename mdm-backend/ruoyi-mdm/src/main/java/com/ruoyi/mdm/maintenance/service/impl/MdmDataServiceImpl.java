@@ -44,7 +44,7 @@ public class MdmDataServiceImpl implements IMdmDataService
 {
     /** 通用列（不含属性列） */
     private static final String[] BASE_COLUMNS = {"id", "object_code", "status", "version",
-            "create_by", "create_time", "update_by", "update_time", "remark"};
+            "create_by", "create_time", "update_by", "update_time", "remark", "source", "source_time"};
 
     @Autowired
     private MdmObjectMapper objectMapper;
@@ -122,6 +122,18 @@ public class MdmDataServiceImpl implements IMdmDataService
         Long pk = doInsert(table, objectCode, "0", pickColumns(table, data));
         distributionService.triggerPush(objectCode, pk, "INSERT", data);
         return pk > 0 ? 1 : 0;
+    }
+
+    @Override
+    public int insertDataWithSource(String objectCode, Map<String, Object> data, String source)
+    {
+        // 1.1.0：带来源标记的插入（导入/API 推送用）
+        if (source != null)
+        {
+            data.put("source", source);
+            data.put("source_time", new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new java.util.Date()));
+        }
+        return insertData(objectCode, data);
     }
 
     @Override

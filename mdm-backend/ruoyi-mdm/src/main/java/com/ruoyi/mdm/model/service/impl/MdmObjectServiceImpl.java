@@ -137,6 +137,9 @@ public class MdmObjectServiceImpl implements IMdmObjectService
         ddl.append("update_by VARCHAR(64) DEFAULT '' COMMENT '更新者', ");
         ddl.append("update_time DATETIME COMMENT '更新时间', ");
         ddl.append("remark VARCHAR(500) DEFAULT NULL COMMENT '备注', ");
+        // 1.1.0 血缘追踪通用列
+        ddl.append("source VARCHAR(64) DEFAULT NULL COMMENT '数据来源(MANUAL/IMPORT:文件名/API:appid)', ");
+        ddl.append("source_time DATETIME DEFAULT NULL COMMENT '来源时间', ");
         ddl.append("PRIMARY KEY (id), UNIQUE KEY uk_object_code (object_code)");
         for (MdmAttribute attr : attrs)
         {

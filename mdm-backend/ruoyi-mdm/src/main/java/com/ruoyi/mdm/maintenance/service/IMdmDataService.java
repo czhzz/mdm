@@ -49,6 +49,16 @@ public interface IMdmDataService
     public int insertData(String objectCode, Map<String, Object> data);
 
     /**
+     * 新增主数据（带来源标记，1.1.0 血缘追踪）
+     *
+     * @param objectCode 对象编码
+     * @param data 数据（键为属性编码）
+     * @param source 来源（MANUAL / IMPORT:文件名 / API:appid）
+     * @return 结果
+     */
+    public int insertDataWithSource(String objectCode, Map<String, Object> data, String source);
+
+    /**
      * 修改主数据
      *
      * @param objectCode 对象编码
