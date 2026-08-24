@@ -4,14 +4,14 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## 项目概述
 
-基于若依 RuoYi-Vue 3.9.2 前后端分离版的主数据管理平台（MDM），版本 1.0.0。六大能力已全部实现：模型管理、编码规则、数据标准、维护审核、数据质量、数据分发。开发计划见 `openspec/changes/mdm-platform-init/tasks.md`（8 周任务全部完成）。
+基于若依 RuoYi-Vue 3.9.2 前后端分离版的主数据管理平台（MDM），版本 1.1.0。六大能力（模型管理、编码规则、数据标准、维护审核、数据质量、数据分发）+ 1.1.0 七项增强（关系建模、Flowable 审核、RabbitMQ 分发、质量大屏、血缘追踪、模板库、微服务评估）均已实现。开发计划见 `openspec/changes/mdm-platform-init/tasks.md`（1.0.0）与 `openspec/changes/mdm-1.1.0/tasks.md`（1.1.0）。
 
 ## 常用命令
 
 ### 后端（mdm-backend/，Spring Boot 2.5.15 / Java 8 / Maven）
 - 构建：`cd mdm-backend && mvn clean package -DskipTests`
 - 启动：`cd mdm-backend/ruoyi-admin && mvn spring-boot:run`（端口 8080），或 `java -jar mdm-backend/ruoyi-admin/target/ruoyi-admin.jar`
-- 依赖：MySQL 库 `mdm`（初始化 `mdm-backend/sql/ry_20260417.sql` + `sql/quartz.sql` + `sql/mdm/init.sql`）+ Redis
+- 依赖：MySQL 库 `mdm`（初始化 `mdm-backend/sql/ry_20260417.sql` + `sql/quartz.sql` + `sql/mdm/init.sql`）+ Redis + RabbitMQ（1.1.0 分发通道）+ Flowable（1.1.0 审核引擎，ACT_* 表自动建）
 - 连接配置：`mdm-backend/ruoyi-admin/src/main/resources/application-druid.yml` 与 `application.yml`，占位符从 `.env` 读取
 
 ### 前端（mdm-frontend/，Vue 3.5 + TS + Vite 6）
@@ -22,7 +22,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - 后端地址：`.env.development` / `.env.production` 的 `VITE_APP_BASE_API`
 
 ### Docker（根目录 docker-compose.yml）
-- 启动全套：`docker compose up -d`（mysql + redis + backend + frontend，端口从 `.env` 读取）
+- 启动全套：`docker compose up -d`（mysql + redis + rabbitmq + backend + frontend，端口从 `.env` 读取）
 - 停止：`docker compose down`
 - 初始化：首次启动自动执行 SQL 脚本（挂载到 mysql 容器的 `/docker-entrypoint-initdb.d/`）
 
@@ -30,6 +30,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - 端口：`SERVER_PORT`（后端 8080）、`FRONTEND_PORT`（前端 80）
 - 数据源：`MYSQL_HOST/PORT/DATABASE/USERNAME/PASSWORD`
 - Redis：`REDIS_HOST/PORT/PASSWORD`（留空 = 无密码）
+- RabbitMQ：`RABBITMQ_HOST/PORT/USERNAME/PASSWORD/VHOST`（管理台 15672）
 - 其他：`DRUID_USERNAME/PASSWORD`、`DRUID_MONITOR_ENABLED`、`TOKEN_SECRET`、`SWAGGER_ENABLED`
 - 优先级：环境变量 > `application-{profile}.yml` > `application.yml`
 - `.env` 已被 `.gitignore` 忽略，勿提交真实密码
@@ -40,8 +41,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `ruoyi-admin`：启动模块，集中配置（数据源、Redis、日志）
 - `ruoyi-framework`：Spring Security + JWT 认证授权、全局异常与响应处理
 - `ruoyi-system`：RBAC 系统管理（用户/角色/菜单/字典/参数/操作日志）
-- `ruoyi-mdm`：MDM 业务模块，6 个子包 —— `model`（模型管理）、`coderule`（编码规则）、`standard`（数据标准）、`maintenance`（动态数据维护）、`quality`（数据质量）、`distribution`（数据分发）
+- `ruoyi-mdm`：MDM 业务模块，10 个子包 —— `model`（模型管理）、`coderule`（编码规则）、`standard`（数据标准）、`maintenance`（动态数据维护）、`quality`（数据质量）、`distribution`（数据分发）、`relation`（关系建模）、`audit`（Flowable 审核）、`lineage`（血缘追踪）、`template`（对象模板库）
 - `ruoyi-common`、`ruoyi-quartz`（定时任务）、`ruoyi-generator`（代码生成）
+- 1.1.0 新增依赖：Flowable 6.8.1（ACT_* 表）、Spring AMQP（RabbitMQ 分发）
 
 ### 前端
 - `src/api/`：按业务模块封装接口（`mdm/`、`system/`、`monitor/`、`tool/`）；请求封装 `src/utils/request.ts`（统一响应体 `AjaxResult`、分页 `TableDataInfo`）
