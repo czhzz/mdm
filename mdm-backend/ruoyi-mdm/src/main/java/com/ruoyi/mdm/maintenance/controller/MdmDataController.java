@@ -21,9 +21,7 @@ import com.ruoyi.common.core.controller.BaseController;
 import com.ruoyi.common.core.domain.AjaxResult;
 import com.ruoyi.common.core.page.TableDataInfo;
 import com.ruoyi.common.enums.BusinessType;
-import com.ruoyi.mdm.maintenance.domain.MdmAuditFlow;
-import com.ruoyi.mdm.maintenance.service.IMdmAuditFlowService;
-import com.ruoyi.mdm.maintenance.service.IMdmAuditService;
+import com.ruoyi.mdm.audit.service.IMdmAuditFlowableService;
 import com.ruoyi.mdm.maintenance.service.IMdmDataService;
 import com.ruoyi.mdm.maintenance.service.IMdmExcelService;
 import com.ruoyi.mdm.model.domain.MdmObject;
@@ -42,10 +40,7 @@ public class MdmDataController extends BaseController
     private IMdmDataService dataService;
 
     @Autowired
-    private IMdmAuditFlowService flowService;
-
-    @Autowired
-    private IMdmAuditService auditService;
+    private IMdmAuditFlowableService auditFlowableService;
 
     @Autowired
     private MdmObjectMapper objectMapper;
@@ -54,7 +49,7 @@ public class MdmDataController extends BaseController
     private IMdmExcelService excelService;
 
     /**
-     * 判断对象是否启用审核流程
+     * 判断对象是否启用审核流程（1.1.0：改为 Flowable，通过 auditProcessKey 判断）
      */
     private boolean auditEnabled(String objectCode)
     {
@@ -63,8 +58,7 @@ public class MdmDataController extends BaseController
         {
             return false;
         }
-        MdmAuditFlow flow = flowService.selectFlowByObjectId(object.getObjectId());
-        return flow != null && "1".equals(flow.getEnabled());
+        return com.ruoyi.common.utils.StringUtils.isNotEmpty(object.getAuditProcessKey());
     }
 
     /**
@@ -107,10 +101,10 @@ public class MdmDataController extends BaseController
     @PostMapping("/{objectCode}")
     public AjaxResult add(@PathVariable String objectCode, @RequestBody Map<String, Object> data)
     {
-        // 启用审核的对象：新增走提交审核
+        // 启用审核的对象：新增走提交审核（Flowable）
         if (auditEnabled(objectCode))
         {
-            auditService.submitAudit(objectCode, 0L, "INSERT", data);
+            auditFlowableService.submitAudit(objectCode, 0L, "INSERT", data);
             return success("已提交审核，审核通过后生效");
         }
         return toAjax(dataService.insertData(objectCode, data));
@@ -124,10 +118,10 @@ public class MdmDataController extends BaseController
     @PutMapping("/{objectCode}/{id}")
     public AjaxResult edit(@PathVariable String objectCode, @PathVariable Long id, @RequestBody Map<String, Object> data)
     {
-        // 启用审核的对象：修改走提交审核，原数据保持生效
+        // 启用审核的对象：修改走提交审核（Flowable），原数据保持生效
         if (auditEnabled(objectCode))
         {
-            auditService.submitAudit(objectCode, id, "UPDATE", data);
+            auditFlowableService.submitAudit(objectCode, id, "UPDATE", data);
             return success("修改已提交审核，审核通过后生效");
         }
         return toAjax(dataService.updateData(objectCode, id, data));
