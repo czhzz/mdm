@@ -131,6 +131,16 @@
         <el-form-item label="显示顺序" prop="orderNum">
           <el-input-number v-model="form.orderNum" controls-position="right" :min="0" />
         </el-form-item>
+        <el-form-item label="审核流程" prop="auditProcessKey">
+          <el-select v-model="form.auditProcessKey" placeholder="请选择审核流程（可选）" clearable style="width: 100%">
+            <el-option
+              v-for="pd in processDefinitions"
+              :key="pd.key"
+              :label="pd.name + '（v' + pd.version + '）'"
+              :value="pd.key"
+            />
+          </el-select>
+        </el-form-item>
         <el-form-item label="备注" prop="remark">
           <el-input v-model="form.remark" type="textarea" placeholder="请输入备注" />
         </el-form-item>
@@ -212,6 +222,19 @@
           <span style="width: 10%; text-align: center">~</span>
           <el-input v-model="attrForm.maxValue" placeholder="最大值" style="width: 45%" />
         </el-form-item>
+        <el-form-item v-if="attrForm.dataType === 'ref'" label="引用对象" prop="refObjectCode">
+          <el-select v-model="attrForm.refObjectCode" placeholder="请选择引用目标对象" clearable style="width: 100%">
+            <el-option
+              v-for="obj in objectList"
+              :key="obj.objectCode"
+              :label="obj.objectName + '（' + obj.objectCode + '）'"
+              :value="obj.objectCode"
+            />
+          </el-select>
+        </el-form-item>
+        <el-form-item v-if="attrForm.dataType === 'ref'" label="显示字段" prop="refDisplay">
+          <el-input v-model="attrForm.refDisplay" placeholder="下拉显示的字段编码，逗号分隔（如 name,phone）" />
+        </el-form-item>
         <el-form-item label="默认值" prop="defaultValue">
           <el-input v-model="attrForm.defaultValue" placeholder="请输入默认值" />
         </el-form-item>
@@ -283,8 +306,15 @@ import {
   editAttribute,
   delAttribute
 } from '@/api/mdm/model'
+import { listProcessDefinitions } from '@/api/mdm/audit'
 
 const { data_type: dataTypeOptions } = useDict('mdm_data_type')
+
+// 已部署的 Flowable 流程定义（对象审核流程绑定用）
+const processDefinitions = ref<Array<{ key: string; name: string; version: number }>>([])
+listProcessDefinitions().then(res => {
+  processDefinitions.value = res.data || []
+})
 
 const objectStatusOptions = [
   { value: '0', label: '未发布', elTagType: 'primary' },
