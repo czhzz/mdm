@@ -146,4 +146,12 @@ public class MdmDistributionController extends BaseController
     {
         return toAjax(distributionService.retryRecord(recordId));
     }
+
+    /** 分发监控：MQ 通道状态（1.1.0） */
+    @PreAuthorize("@ss.hasPermi('mdm:distribution:list')")
+    @GetMapping("/monitor")
+    public AjaxResult monitor()
+    {
+        return success(distributionService.getMqMonitorData());
+    }
 }

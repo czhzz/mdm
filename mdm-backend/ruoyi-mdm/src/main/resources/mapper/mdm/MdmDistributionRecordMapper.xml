@@ -82,4 +82,9 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         where record_id = #{recordId}
     </update>
 
+    <!-- 最近 N 条记录（监控统计用，1.1.0） -->
+    <select id="selectRecentRecords" parameterType="int" resultMap="MdmDistributionRecordResult">
+        select * from mdm_distribution_record order by record_id desc limit #{limit}
+    </select>
+
 </mapper>

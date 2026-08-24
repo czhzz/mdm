@@ -3,8 +3,13 @@ package com.ruoyi.mdm.distribution.service.impl;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Properties;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import org.springframework.amqp.rabbit.core.RabbitAdmin;
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
+import org.springframework.amqp.core.Queue;
+import org.springframework.amqp.core.QueueBuilder;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
@@ -18,6 +23,7 @@ import com.ruoyi.common.utils.DateUtils;
 import com.ruoyi.common.utils.SecurityUtils;
 import com.ruoyi.common.utils.StringUtils;
 import com.ruoyi.common.utils.uuid.IdUtils;
+import com.ruoyi.mdm.distribution.config.RabbitMQConfig;
 import com.ruoyi.mdm.distribution.domain.MdmApp;
 import com.ruoyi.mdm.distribution.domain.MdmDistribution;
 import com.ruoyi.mdm.distribution.domain.MdmDistributionRecord;
@@ -50,6 +56,12 @@ public class DistributionServiceImpl implements IDistributionService
 
     @Autowired
     private MdmObjectMapper objectMapper;
+
+    @Autowired
+    private RabbitTemplate rabbitTemplate;
+
+    @Autowired
+    private RabbitAdmin rabbitAdmin;
 
     /** 异步推送线程池（daemon，订阅方不可用不阻塞主流程） */
     // ponytail: 固定小线程池，订阅方规模扩大或推送量大时按设计决策五引入 RabbitMQ 替换
@@ -241,8 +253,55 @@ public class DistributionServiceImpl implements IDistributionService
             record.setStatus("0");
             record.setCreateBy(SecurityUtils.getUsername());
             recordMapper.insertRecord(record);
-            // 异步推送，订阅方不可用不阻塞主流程
-            PUSH_EXECUTOR.submit(() -> send(record, false));
+            // 1.1.0：按通道分流——HTTP 走线程池推送，MQ 走 RabbitMQ 消息
+            if ("MQ".equalsIgnoreCase(config.getChannel()))
+            {
+                sendMq(record, config);
+            }
+            else
+            {
+                // 异步推送，订阅方不可用不阻塞主流程
+                PUSH_EXECUTOR.submit(() -> send(record, false));
+            }
+        }
+    }
+
+    /**
+     * MQ 通道推送：消息发送到 Topic Exchange，路由到订阅方队列
+     */
+    private void sendMq(MdmDistributionRecord record, MdmDistribution config)
+    {
+        try
+        {
+            String queueName = StringUtils.isNotEmpty(config.getQueueName())
+                    ? config.getQueueName()
+                    : RabbitMQConfig.ROUTING_KEY_PREFIX + record.getObjectCode();
+            // 动态声明订阅方队列（幂等，已存在则跳过）
+            Queue queue = QueueBuilder.durable(queueName)
+                    .withArguments(RabbitMQConfig.queueArgs(queueName + ".dlq")).build();
+            rabbitAdmin.declareQueue(queue);
+            rabbitAdmin.declareBinding(new org.springframework.amqp.core.Binding(
+                    queueName, org.springframework.amqp.core.Binding.DestinationType.QUEUE,
+                    RabbitMQConfig.EXCHANGE, RabbitMQConfig.ROUTING_KEY_PREFIX + record.getObjectCode(), null));
+            // 发送消息（JSON 转换器在 RabbitTemplate 已配置）
+            String routingKey = RabbitMQConfig.ROUTING_KEY_PREFIX + record.getObjectCode();
+            rabbitTemplate.convertAndSend(RabbitMQConfig.EXCHANGE, routingKey, record.getPayload());
+            // 发送成功（发布确认）
+            MdmDistributionRecord ok = new MdmDistributionRecord();
+            ok.setRecordId(record.getRecordId());
+            ok.setStatus("1");
+            ok.setSuccessTime(DateUtils.dateTimeNow());
+            recordMapper.updatePushResult(ok);
+        }
+        catch (Exception e)
+        {
+            MdmDistributionRecord fail = new MdmDistributionRecord();
+            fail.setRecordId(record.getRecordId());
+            fail.setStatus("2");
+            String msg = StringUtils.isEmpty(e.getMessage()) ? e.getClass().getSimpleName() : e.getMessage();
+            fail.setErrorMsg(msg.length() > 490 ? msg.substring(0, 490) : msg);
+            fail.setRetryCount((record.getRetryCount() == null ? 0 : record.getRetryCount()) + 1);
+            recordMapper.updatePushResult(fail);
         }
     }
 
@@ -252,6 +311,41 @@ public class DistributionServiceImpl implements IDistributionService
      * @param sync 同步（手动重推）或异步
      * @return 是否成功
      */
+    @Override
+    public Map<String, Object> getMqMonitorData()
+    {
+        Map<String, Object> result = new LinkedHashMap<>();
+        // 死信队列积压
+        Object dlxCount = 0;
+        try
+        {
+            org.springframework.amqp.core.AmqpAdmin admin = rabbitAdmin;
+            if (admin != null)
+            {
+                Properties props = admin.getQueueProperties(RabbitMQConfig.DLX_QUEUE);
+                if (props != null)
+                {
+                    dlxCount = props.getOrDefault("QUEUE_MESSAGE_COUNT", 0);
+                }
+            }
+        }
+        catch (Exception e)
+        {
+            dlxCount = -1; // MQ 不可用
+        }
+        result.put("dlxCount", dlxCount);
+        // 统计分发成功率（近 100 条记录）
+        List<MdmDistributionRecord> records = recordMapper.selectRecentRecords(100);
+        long total = records.size();
+        long success = records.stream().filter(r -> "1".equals(r.getStatus())).count();
+        result.put("successRate", total == 0 ? 100.0 : Math.round(success * 1000.0 / total) / 10.0);
+        result.put("totalRecords", total);
+        // 各通道分布
+        long mqCount = records.stream().filter(r -> "MQ".equalsIgnoreCase(r.getEndpointUrl())).count();
+        result.put("mqCount", mqCount);
+        return result;
+    }
+
     private boolean send(MdmDistributionRecord record, boolean sync)
     {
         MdmDistributionRecord sending = new MdmDistributionRecord();

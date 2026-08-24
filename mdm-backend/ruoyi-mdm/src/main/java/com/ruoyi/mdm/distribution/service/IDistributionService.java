@@ -58,4 +58,9 @@ public interface IDistributionService
 
     /** 数据变更后触发分发（新增/修改/审核落地均调用） */
     public void triggerPush(String objectCode, Long dataId, String actionType, Map<String, Object> data);
+
+    // ===== 分发监控（1.1.0） =====
+
+    /** 获取 MQ 分发监控数据（队列积压/成功率/延迟） */
+    public Map<String, Object> getMqMonitorData();
 }

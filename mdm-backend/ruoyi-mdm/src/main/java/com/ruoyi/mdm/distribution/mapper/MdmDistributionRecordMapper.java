@@ -21,4 +21,7 @@ public interface MdmDistributionRecordMapper
 
     /** 订阅方确认回执 */
     public int updateConfirm(MdmDistributionRecord mdmDistributionRecord);
+
+    /** 最近 N 条记录（监控统计用，1.1.0） */
+    public List<MdmDistributionRecord> selectRecentRecords(int limit);
 }
