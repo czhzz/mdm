@@ -2,13 +2,18 @@ package com.ruoyi.mdm.integration.domain;
 
 import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.apache.commons.lang3.builder.ToStringStyle;
+import org.apache.ibatis.type.Alias;
 import com.ruoyi.common.core.domain.BaseEntity;
 
 /**
  * 主数据应用凭证 mdm_app
  *
+ * <p>与 distribution 包同名 domain 共存，typeAliasesPackage 注册冲突，
+ * 用显式别名区分（旧包删除后此注解可一并移除）
+ *
  * @author ruoyi
  */
+@Alias("IntegrationMdmApp")
 public class MdmApp extends BaseEntity
 {
     private static final long serialVersionUID = 1L;
