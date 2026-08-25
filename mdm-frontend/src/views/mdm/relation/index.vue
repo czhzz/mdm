@@ -2,10 +2,24 @@
   <div class="app-container">
     <el-form :model="queryParams" ref="queryRef" :inline="true" label-width="80px">
       <el-form-item label="源对象" prop="sourceObjectCode">
-        <el-input v-model="queryParams.sourceObjectCode" placeholder="请输入源对象编码" clearable style="width: 160px" @keyup.enter="handleQuery" />
+        <el-select v-model="queryParams.sourceObjectCode" placeholder="请选择源对象" clearable style="width: 160px" @change="handleQuery">
+          <el-option
+            v-for="obj in objectOptions"
+            :key="obj.objectId"
+            :label="obj.objectName + '（' + obj.objectCode + '）'"
+            :value="obj.objectCode"
+          />
+        </el-select>
       </el-form-item>
       <el-form-item label="目标对象" prop="targetObjectCode">
-        <el-input v-model="queryParams.targetObjectCode" placeholder="请输入目标对象编码" clearable style="width: 160px" @keyup.enter="handleQuery" />
+        <el-select v-model="queryParams.targetObjectCode" placeholder="请选择目标对象" clearable style="width: 160px" @change="handleQuery">
+          <el-option
+            v-for="obj in objectOptions"
+            :key="obj.objectId"
+            :label="obj.objectName + '（' + obj.objectCode + '）'"
+            :value="obj.objectCode"
+          />
+        </el-select>
       </el-form-item>
       <el-form-item>
         <el-button type="primary" icon="Search" @click="handleQuery">搜索</el-button>
@@ -59,10 +73,24 @@
     <el-dialog :title="title" v-model="open" width="600px" append-to-body>
       <el-form ref="formRef" :model="form" :rules="rules" label-width="100px">
         <el-form-item label="源对象编码" prop="sourceObjectCode">
-          <el-input v-model="form.sourceObjectCode" placeholder="请输入源对象编码" />
+          <el-select v-model="form.sourceObjectCode" placeholder="请选择源对象" style="width: 100%" @change="loadRefAttributes">
+            <el-option
+              v-for="obj in objectOptions"
+              :key="obj.objectId"
+              :label="obj.objectName + '（' + obj.objectCode + '）'"
+              :value="obj.objectCode"
+            />
+          </el-select>
         </el-form-item>
         <el-form-item label="目标对象编码" prop="targetObjectCode">
-          <el-input v-model="form.targetObjectCode" placeholder="请输入目标对象编码" />
+          <el-select v-model="form.targetObjectCode" placeholder="请选择目标对象" style="width: 100%">
+            <el-option
+              v-for="obj in objectOptions"
+              :key="obj.objectId"
+              :label="obj.objectName + '（' + obj.objectCode + '）'"
+              :value="obj.objectCode"
+            />
+          </el-select>
         </el-form-item>
         <el-form-item label="关系类型" prop="relationType">
           <el-select v-model="form.relationType" placeholder="请选择关系类型" style="width: 100%">
@@ -72,7 +100,14 @@
           </el-select>
         </el-form-item>
         <el-form-item label="引用属性编码" prop="sourceFieldCode" v-if="form.relationType !== 'MANY_TO_MANY'">
-          <el-input v-model="form.sourceFieldCode" placeholder="源对象中引用属性编码" />
+          <el-select v-model="form.sourceFieldCode" placeholder="请选择源对象中的引用属性" style="width: 100%">
+            <el-option
+              v-for="attr in refAttributes"
+              :key="attr.attrCode"
+              :label="attr.attrName + '（' + attr.attrCode + '）'"
+              :value="attr.attrCode"
+            />
+          </el-select>
         </el-form-item>
         <el-form-item label="级联规则" prop="cascadeRule">
           <el-select v-model="form.cascadeRule" placeholder="请选择级联规则" style="width: 100%">
@@ -97,6 +132,8 @@
 import { ref, reactive } from 'vue'
 import { listRelation, getRelation, addRelation, editRelation, delRelation } from '@/api/mdm/relation'
 import type { MdmRelation } from '@/api/mdm/relation'
+import { listObject, getObjectMeta } from '@/api/mdm/model'
+import type { MdmObject, MdmAttribute } from '@/types'
 import { ElMessage, ElMessageBox } from 'element-plus'
 
 const loading = ref(false)
@@ -106,6 +143,9 @@ const multiple = ref(false)
 const total = ref(0)
 const relationList = ref<MdmRelation[]>([])
 const ids = ref<number[]>([])
+
+const objectOptions = ref<MdmObject[]>([])
+const refAttributes = ref<MdmAttribute[]>([])
 
 const queryParams = reactive({
   pageNum: 1,
@@ -124,9 +164,10 @@ const form = reactive<MdmRelation>({
 })
 
 const rules = {
-  sourceObjectCode: [{ required: true, message: '源对象编码不能为空', trigger: 'blur' }],
-  targetObjectCode: [{ required: true, message: '目标对象编码不能为空', trigger: 'blur' }],
-  relationType: [{ required: true, message: '关系类型不能为空', trigger: 'change' }]
+  sourceObjectCode: [{ required: true, message: '请选择源对象', trigger: 'change' }],
+  targetObjectCode: [{ required: true, message: '请选择目标对象', trigger: 'change' }],
+  relationType: [{ required: true, message: '关系类型不能为空', trigger: 'change' }],
+  sourceFieldCode: [{ required: true, message: '请选择引用属性', trigger: 'change' }]
 }
 
 function relationTypeLabel(type: string) {
@@ -137,6 +178,25 @@ function relationTypeLabel(type: string) {
 function relationTypeTag(type: string) {
   const map: Record<string, string> = { ONE_TO_ONE: 'success', ONE_TO_MANY: 'primary', MANY_TO_MANY: 'warning' }
   return map[type] || 'info'
+}
+
+/** 加载全部对象（不过滤 status：草稿对象也可建立关系） */
+function loadObjects() {
+  listObject({ pageSize: 100 }).then(res => {
+    objectOptions.value = res.rows || []
+  })
+}
+
+/** 源对象变更 → 联动加载其引用属性 */
+function loadRefAttributes() {
+  refAttributes.value = []
+  form.sourceFieldCode = ''
+  if (!form.sourceObjectCode) return
+  const obj = objectOptions.value.find(o => o.objectCode === form.sourceObjectCode)
+  if (!obj?.objectId) return
+  getObjectMeta(obj.objectId).then(res => {
+    refAttributes.value = (res.data?.attributes || []).filter(a => a.refObjectCode)
+  })
 }
 
 function getList() {
@@ -169,6 +229,7 @@ function handleAdd() {
     id: undefined, sourceObjectCode: '', targetObjectCode: '', relationType: 'ONE_TO_ONE',
     sourceFieldCode: '', cascadeRule: 'RESTRICT', isBidirectional: '0'
   })
+  refAttributes.value = []
   title.value = '新增关联关系'
   open.value = true
 }
@@ -176,6 +237,8 @@ function handleAdd() {
 function handleUpdate(row: MdmRelation) {
   getRelation(row.id as number).then(res => {
     Object.assign(form, res.data)
+    // 回显时同步加载源对象引用属性，保证下拉选项存在
+    loadRefAttributes()
     title.value = '修改关联关系'
     open.value = true
   })
@@ -200,5 +263,6 @@ function submitForm() {
   })
 }
 
+loadObjects()
 getList()
 </script>

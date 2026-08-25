@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.mdm.integration.mapper.MdmQueryLogMapper">
+
+    <resultMap type="MdmQueryLog" id="MdmQueryLogResult">
+        <id     property="id"               column="id"                />
+        <result property="appCode"          column="app_code"          />
+        <result property="objectCode"       column="object_code"       />
+        <result property="success"          column="success"           />
+        <result property="requestSummary"   column="request_summary"   />
+        <result property="responseSummary"  column="response_summary"  />
+        <result property="errorMsg"         column="error_msg"         />
+        <result property="costMs"           column="cost_ms"           />
+        <result property="ip"               column="ip"                />
+        <result property="resultCount"      column="result_count"      />
+        <result property="createTime"       column="create_time"       />
+    </resultMap>
+
+    <select id="selectList" parameterType="MdmQueryLog" resultMap="MdmQueryLogResult">
+        select id, app_code, object_code, success, request_summary, response_summary,
+               error_msg, cost_ms, ip, result_count, create_time
+        from mdm_query_log
+        <where>
+            <if test="appCode != null and appCode != ''">and app_code = #{appCode}</if>
+            <if test="objectCode != null and objectCode != ''">and object_code = #{objectCode}</if>
+            <if test="success != null and success != ''">and success = #{success}</if>
+        </where>
+        order by id desc
+    </select>
+
+    <insert id="insert" parameterType="MdmQueryLog" useGeneratedKeys="true" keyProperty="id">
+        insert into mdm_query_log (
+            app_code, object_code, success, request_summary, response_summary,
+            error_msg, cost_ms, ip, result_count, create_time
+        ) values (
+            #{appCode}, #{objectCode}, #{success}, #{requestSummary}, #{responseSummary},
+            #{errorMsg}, #{costMs}, #{ip}, #{resultCount}, sysdate()
+        )
+    </insert>
+
+    <!-- 手动清理：删除截止时间前的日志 -->
+    <delete id="deleteBeforeTime" parameterType="String">
+        delete from mdm_query_log where create_time &lt;= #{beforeTime}
+    </delete>
+
+</mapper>

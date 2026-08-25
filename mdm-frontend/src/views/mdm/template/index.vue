@@ -58,7 +58,7 @@
 
 <script setup lang="ts">
 import { ref, reactive } from 'vue'
-import { listTemplates, previewTemplate, createFromTemplate } from '@/api/mdm/template'
+import { listTemplates, previewTemplate as fetchTemplatePreview, createFromTemplate } from '@/api/mdm/template'
 import type { MdmTemplate } from '@/api/mdm/template'
 import { ElMessage, ElMessageBox } from 'element-plus'
 
@@ -76,7 +76,8 @@ function loadTemplates() {
 }
 
 function previewTemplate(tpl: MdmTemplate) {
-  previewTemplate(tpl.code).then(res => {
+  // 本地函数与 API 同名，调用 API 时用别名 fetchTemplatePreview，避免遮蔽递归
+  fetchTemplatePreview(tpl.code).then(res => {
     Object.assign(preview, res.data)
     previewOpen.value = true
   })

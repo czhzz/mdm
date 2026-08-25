@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.ruoyi.mdm.integration.mapper.MdmQueryApiMapper">
+
+    <resultMap type="MdmQueryApi" id="MdmQueryApiResult">
+        <id     property="id"         column="id"           />
+        <result property="apiCode"    column="api_code"     />
+        <result property="apiName"    column="api_name"     />
+        <result property="objectCode" column="object_code"  />
+        <result property="status"     column="status"       />
+        <result property="remark"     column="remark"       />
+        <result property="createBy"   column="create_by"    />
+        <result property="createTime" column="create_time"  />
+        <result property="updateBy"   column="update_by"    />
+        <result property="updateTime" column="update_time"  />
+    </resultMap>
+
+    <sql id="selectVo">
+        select id, api_code, api_name, object_code, status, remark, create_by, create_time, update_by, update_time
+        from mdm_query_api
+    </sql>
+
+    <select id="selectById" parameterType="Long" resultMap="MdmQueryApiResult">
+        <include refid="selectVo"/>
+        where id = #{id}
+    </select>
+
+    <select id="selectByApiCode" parameterType="String" resultMap="MdmQueryApiResult">
+        <include refid="selectVo"/>
+        where api_code = #{apiCode}
+    </select>
+
+    <select id="selectList" parameterType="MdmQueryApi" resultMap="MdmQueryApiResult">
+        <include refid="selectVo"/>
+        <where>
+            <if test="apiCode != null and apiCode != ''">and api_code like concat('%', #{apiCode}, '%')</if>
+            <if test="apiName != null and apiName != ''">and api_name like concat('%', #{apiName}, '%')</if>
+            <if test="objectCode != null and objectCode != ''">and object_code = #{objectCode}</if>
+            <if test="status != null and status != ''">and status = #{status}</if>
+        </where>
+        order by id desc
+    </select>
+
+    <insert id="insert" parameterType="MdmQueryApi" useGeneratedKeys="true" keyProperty="id">
+        insert into mdm_query_api (
+            api_code, api_name, object_code,
+            <if test="status != null and status != ''">status,</if>
+            <if test="remark != null">remark,</if>
+            create_by, create_time
+        ) values (
+            #{apiCode}, #{apiName}, #{objectCode},
+            <if test="status != null and status != ''">#{status},</if>
+            <if test="remark != null">#{remark},</if>
+            #{createBy}, sysdate()
+        )
+    </insert>
+
+    <update id="update" parameterType="MdmQueryApi">
+        update mdm_query_api
+        <set>
+            <if test="apiCode != null and apiCode != ''">api_code = #{apiCode},</if>
+            <if test="apiName != null and apiName != ''">api_name = #{apiName},</if>
+            <if test="objectCode != null and objectCode != ''">object_code = #{objectCode},</if>
+            <if test="status != null and status != ''">status = #{status},</if>
+            <if test="remark != null">remark = #{remark},</if>
+            update_by = #{updateBy}, update_time = sysdate()
+        </set>
+        where id = #{id}
+    </update>
+
+    <delete id="deleteByIds" parameterType="Long">
+        delete from mdm_query_api where id in
+        <foreach collection="array" item="id" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </delete>
+
+</mapper>

@@ -42,6 +42,8 @@ export interface MdmAttribute {
   maxValue?: string
   enumValues?: string
   defaultValue?: string
+  refObjectCode?: string
+  refDisplay?: string
   orderNum?: number
   status?: string
 }
@@ -162,4 +164,91 @@ export interface MdmAuditFlow {
   objectId?: number
   enabled?: string
   auditRole?: string
+}
+
+// ===== 集成管理（1.2.0） =====
+
+/** 接收接口配置 */
+export interface MdmReceiveApi {
+  id?: number
+  apiCode?: string
+  apiName?: string
+  objectCode?: string
+  status?: string
+  remark?: string
+}
+
+/** 查询接口配置（结构同接收接口） */
+export interface MdmQueryApi {
+  id?: number
+  apiCode?: string
+  apiName?: string
+  objectCode?: string
+  status?: string
+  remark?: string
+}
+
+/** 分发配置（原 MdmDistribution，表 mdm_distribute_api） */
+export interface MdmDistributeApi {
+  distId?: number
+  appId?: number
+  objectId?: number
+  triggerType?: string
+  channel?: string
+  queueName?: string
+  endpointUrl?: string
+  enabled?: string
+  remark?: string
+  appName?: string
+  objectName?: string
+}
+
+/** 分发日志（原 MdmDistributionRecord，表 mdm_distribute_log） */
+export interface MdmDistributeLog {
+  recordId?: number
+  appId?: number
+  appCode?: string
+  objectCode?: string
+  dataId?: number
+  actionType?: string
+  endpointUrl?: string
+  payload?: string
+  status?: string
+  errorMsg?: string
+  sendTime?: string
+  successTime?: string
+  confirmTime?: string
+  retryCount?: number
+  appName?: string
+  createTime?: string
+}
+
+/** 接收接口日志 */
+export interface MdmReceiveLog {
+  id?: number
+  appCode?: string
+  objectCode?: string
+  businessCode?: string
+  success?: string
+  requestSummary?: string
+  responseSummary?: string
+  errorMsg?: string
+  costMs?: number
+  ip?: string
+  createTime?: string
+}
+
+/** 查询接口日志 */
+export interface MdmQueryLog {
+  id?: number
+  appCode?: string
+  objectCode?: string
+  success?: string
+  requestSummary?: string
+  responseSummary?: string
+  errorMsg?: string
+  costMs?: number
+  ip?: string
+  resultCount?: number
+  createTime?: string
 }

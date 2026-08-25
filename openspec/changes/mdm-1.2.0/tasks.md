@@ -36,22 +36,22 @@
 
 ### #4 关系管理下拉化
 
-- [ ] 2.1 前端：`views/mdm/relation/index.vue` 表单源对象/目标对象 `el-input` → `el-select`（选项调 `listObject`，展示 objectName（objectCode））（工时：0.5 人天）
-- [ ] 2.2 前端：引用属性编码 `el-input` → `el-select`，依赖源对象选择联动加载（`getObjectMeta` 返回的属性列表，仅引用类型属性可选）（工时：1 人天）
-- [ ] 2.3 前端：查询区两个编码输入框同步改下拉（工时：0.5 人天）
+- [x] 2.1 前端：`views/mdm/relation/index.vue` 表单源对象/目标对象 `el-input` → `el-select`（选项调 `listObject`，展示 objectName（objectCode））（工时：0.5 人天）
+- [x] 2.2 前端：引用属性编码 `el-input` → `el-select`，依赖源对象选择联动加载（`getObjectMeta` 返回的属性列表，仅引用类型属性可选）（工时：1 人天）
+- [x] 2.3 前端：查询区两个编码输入框同步改下拉（工时：0.5 人天）
 
 ### #5 模板库点击无反应
 
-- [ ] 2.4 排查：确认"无反应"位置——菜单点击无路由 vs 卡片点击 `previewTemplate` 无弹窗。检查 sys_menu 模板菜单 component 路径、`template/index.vue` 的 list/detail 接口调用与后端 `template/controller/MdmTemplateController.java` 返回（工时：1 人天）
-- [ ] 2.5 修复：按排查结果修复（菜单 SQL 或接口/前端逻辑），upgrade-1.2.0.sql 登记菜单修正（工时：1 人天）
-- [ ] 2.6 验证：模板库菜单可进入、卡片点击弹预览、一键创建可用（工时：0.5 人天）
+- [x] 2.4 排查：确认根因——菜单（2037）与接口路径（`/mdm/template/list|preview/{code}|create/{code}`）均正常，无反应点位于卡片点击：`template/index.vue` 本地函数 `previewTemplate` 与 API import 同名，函数体内自递归 → 栈溢出、弹窗永不打开（工时：1 人天）
+- [x] 2.5 修复：API import 别名 `previewTemplate as fetchTemplatePreview`，消除遮蔽；无需 SQL 菜单修正（工时：1 人天）
+- [x] 2.6 验证：前端构建通过；弹窗/一键创建运行时验证归 4.2 全量回归（工时：0.5 人天）
 
 ### #3 集成管理（启动）
 
 - [x] 2.7 后端：设计确认——表结构与模块形态见 design.md（`mdm_receive_api` / `mdm_query_api` / `mdm_integration_log`；集成管理为独立模块）（工时：0.5 人天）
-- [ ] 2.8 后端：upgrade-1.2.0.sql —— 新建 `mdm_receive_api`、`mdm_query_api`、`mdm_receive_log`、`mdm_query_log`；`mdm_distribution` RENAME `mdm_distribute_api`；`mdm_distribution_record` RENAME `mdm_distribute_log`（新增 app_code 列经 mdm_app 回填）（工时：1 人天）
-- [ ] 2.9 后端：新建 `integration` 子包（独立模块）——迁入 distribution 现有 domain/mapper/service/RabbitMQConfig，新增 receive/query/log 三组 domain + mapper（MyBatis XML 与现有风格一致）（工时：1.5 人天）
-- [ ] 2.10 前端：新建 `views/mdm/integration/` 目录骨架 + `api/mdm/integration.ts` 统一接口封装（app/receive/query/distribute/log，管理侧前缀 `/mdm/integration`）（工时：1 人天）
+- [x] 2.8 后端：upgrade-1.2.0.sql —— 新建 `mdm_receive_api`、`mdm_query_api`、`mdm_receive_log`、`mdm_query_log`；`mdm_distribution` RENAME `mdm_distribute_api`；`mdm_distribution_record` RENAME `mdm_distribute_log`（新增 app_code 列经 mdm_app 回填）（工时：1 人天）
+- [x] 2.9 后端：新建 `integration` 子包（独立模块）——迁入 distribution 现有 domain/mapper/service/RabbitMQConfig（随表更名 MdmDistributeApi/MdmDistributeLog + app_code 回填），新增 receive/query/log 三组 domain + mapper（MyBatis XML 与现有风格一致）；RabbitMQConfig Bean 声明暂留旧包，旧包删除时并入（工时：1.5 人天）
+- [x] 2.10 前端：新建 `views/mdm/integration/` 目录骨架（5 页面占位）+ `api/mdm/integration.ts` 统一接口封装（app/receive/query/distribute/log/clean，管理侧前缀 `/mdm/integration`）（工时：1 人天）
 
 ## 第 3 周：集成管理完成（10 人天）
 

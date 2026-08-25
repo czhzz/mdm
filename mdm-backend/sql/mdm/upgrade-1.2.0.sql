@@ -49,3 +49,101 @@ from dual where not exists (select 1 from sys_menu where menu_id = '2046');
 update sys_menu set parent_id = '2046', path = 'index',    order_num = '1' where menu_id = '2027';
 update sys_menu set parent_id = '2046', path = 'process',  order_num = '2' where menu_id = '2039';
 update sys_menu set parent_id = '2046', path = 'designer', order_num = '3' where menu_id = '2040';
+
+-- ---------------------------------------------------------------------
+-- 三、#3 数据分发 → 集成管理：表重命名 + 新表（第 2 周）
+-- 配置表命名 mdm_{类型}_api，日志表 mdm_{类型}_log
+-- RENAME 仅改表名，字段不动（含 1.1.0 的 channel/queue_name 列）
+-- ---------------------------------------------------------------------
+drop procedure if exists mdm_rename_distribution_tables;
+delimiter ;;
+create procedure mdm_rename_distribution_tables()
+begin
+    if exists (select 1 from information_schema.tables
+               where table_schema = database() and table_name = 'mdm_distribution')
+       and not exists (select 1 from information_schema.tables
+               where table_schema = database() and table_name = 'mdm_distribute_api') then
+        rename table mdm_distribution to mdm_distribute_api;
+    end if;
+
+    if exists (select 1 from information_schema.tables
+               where table_schema = database() and table_name = 'mdm_distribution_record')
+       and not exists (select 1 from information_schema.tables
+               where table_schema = database() and table_name = 'mdm_distribute_log') then
+        rename table mdm_distribution_record to mdm_distribute_log;
+        -- 新增 app_code 统一筛选维度，经 mdm_app.appid 回填（RENAME 后一次性执行）
+        alter table mdm_distribute_log add column app_code varchar(64) default null comment '应用编码（mdm_app.appid 回填）' after app_id;
+        update mdm_distribute_log l left join mdm_app a on a.app_id = l.app_id set l.app_code = a.appid;
+    end if;
+end;;
+delimiter ;
+call mdm_rename_distribution_tables();
+drop procedure mdm_rename_distribution_tables;
+
+-- 接收接口配置表
+create table if not exists mdm_receive_api (
+  id            bigint(20)      not null auto_increment    comment '接口ID',
+  api_code      varchar(64)     not null                   comment '接口编码（唯一，对外路径用）',
+  api_name      varchar(128)    not null                   comment '接口名称',
+  object_code   varchar(64)     not null                   comment '目标数据对象编码',
+  status        char(1)         default '0'                comment '状态（0启用 1停用）',
+  remark        varchar(500)    default null               comment '备注',
+  create_by     varchar(64)     default ''                 comment '创建者',
+  create_time   datetime                                   comment '创建时间',
+  update_by     varchar(64)     default ''                 comment '更新者',
+  update_time   datetime                                   comment '更新时间',
+  primary key (id),
+  unique key uk_api_code (api_code)
+) engine=innodb auto_increment=1 comment = '接收接口配置表';
+
+-- 查询接口配置表（结构同接收接口）
+create table if not exists mdm_query_api (
+  id            bigint(20)      not null auto_increment    comment '接口ID',
+  api_code      varchar(64)     not null                   comment '接口编码（唯一，对外路径用）',
+  api_name      varchar(128)    not null                   comment '接口名称',
+  object_code   varchar(64)     not null                   comment '目标数据对象编码',
+  status        char(1)         default '0'                comment '状态（0启用 1停用）',
+  remark        varchar(500)    default null               comment '备注',
+  create_by     varchar(64)     default ''                 comment '创建者',
+  create_time   datetime                                   comment '创建时间',
+  update_by     varchar(64)     default ''                 comment '更新者',
+  update_time   datetime                                   comment '更新时间',
+  primary key (id),
+  unique key uk_api_code (api_code)
+) engine=innodb auto_increment=1 comment = '查询接口配置表';
+
+-- 接收日志表
+create table if not exists mdm_receive_log (
+  id               bigint(20)   not null auto_increment    comment '日志ID',
+  app_code         varchar(64)  default null               comment '应用编码（appid）',
+  object_code      varchar(64)  default null               comment '数据对象编码',
+  business_code    varchar(64)  default null               comment '接收数据的 dataCode',
+  success          char(1)      default '0'                comment '0成功 1失败',
+  request_summary  text                                    comment '请求摘要（截断500字符）',
+  response_summary text                                    comment '响应摘要（截断500字符）',
+  error_msg        varchar(2000) default null              comment '错误信息',
+  cost_ms          int          default 0                  comment '耗时（毫秒）',
+  ip               varchar(64)  default null               comment '来源IP',
+  create_time      datetime                                comment '创建时间',
+  primary key (id),
+  key idx_app_time (app_code, create_time),
+  key idx_object_time (object_code, create_time)
+) engine=innodb auto_increment=1 comment = '接收接口日志表';
+
+-- 查询日志表
+create table if not exists mdm_query_log (
+  id               bigint(20)   not null auto_increment    comment '日志ID',
+  app_code         varchar(64)  default null               comment '应用编码（appid）',
+  object_code      varchar(64)  default null               comment '数据对象编码',
+  success          char(1)      default '0'                comment '0成功 1失败',
+  request_summary  text                                    comment '请求摘要（截断500字符）',
+  response_summary text                                    comment '响应摘要（截断500字符）',
+  error_msg        varchar(2000) default null              comment '错误信息',
+  cost_ms          int          default 0                  comment '耗时（毫秒）',
+  ip               varchar(64)  default null               comment '来源IP',
+  result_count     int          default 0                  comment '返回条数',
+  create_time      datetime                                comment '创建时间',
+  primary key (id),
+  key idx_app_time (app_code, create_time),
+  key idx_object_time (object_code, create_time)
+) engine=innodb auto_increment=1 comment = '查询接口日志表';
