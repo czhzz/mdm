@@ -103,7 +103,8 @@ const rules = {
 }
 
 const loadObjects = async () => {
-  const res = await listObject({ status: '1', pageSize: 100 })
+  // 不过滤 status：编码规则应在对象发布前即可配置（草稿对象同样可选）
+  const res = await listObject({ pageSize: 100 })
   objectOptions.value = res.rows
 }
 

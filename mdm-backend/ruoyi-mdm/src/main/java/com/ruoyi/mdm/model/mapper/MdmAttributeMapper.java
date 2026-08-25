@@ -1,6 +1,7 @@
 package com.ruoyi.mdm.model.mapper;
 
 import java.util.List;
+import org.apache.ibatis.annotations.Param;
 import com.ruoyi.mdm.model.domain.MdmAttribute;
 
 /**
@@ -33,7 +34,7 @@ public interface MdmAttributeMapper
      * @param attrCode 属性编码
      * @return 主数据属性
      */
-    public MdmAttribute checkAttributeCodeUnique(Long objectId, String attrCode);
+    public MdmAttribute checkAttributeCodeUnique(@Param("objectId") Long objectId, @Param("attrCode") String attrCode);
 
     /**
      * 新增主数据属性

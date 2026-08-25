@@ -56,7 +56,8 @@
 ### 6. 新建流程 404
 
 - 根因：`sys_menu` 2040 path=`audit-designer`、parent=2039(path=`audit-process`) → 实际路由 `/mdm/audit-process/audit-designer`，而前端 `router.push('/mdm/audit/designer')`
-- 修复（统一约定 `/mdm/audit/*`）：upgrade-1.2.0.sql 改 sys_menu —— 2039 挂 2027 下 path=`process`、2040 挂 2027 下 path=`designer` → `/mdm/audit/process`、`/mdm/audit/designer`；前端 push 不变
+- 若依约束（实施中发现）：`buildMenus` 仅渲染 M（目录）型菜单的子菜单，C 下挂 C 不生成路由——所以不能把 2039/2040 直接挂到审核待办（2027，C 型）下
+- 修复（统一约定 `/mdm/audit/*`）：upgrade-1.2.0.sql 新建"审核中心"M 目录（2046，path=`audit`），2027/2039/2040 挂其下（path=`index`/`process`/`designer`）→ `/mdm/audit/index`、`/mdm/audit/process`、`/mdm/audit/designer`；前端 push 不变
 
 ## 二、集成管理模块（独立模块）
 

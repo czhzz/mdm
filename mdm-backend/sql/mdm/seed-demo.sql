@@ -3,10 +3,12 @@ SET NAMES utf8mb4;
 -- ============================================================
 -- 示例主数据落地（第 8 周 9.2）：客户、供应商
 -- 依赖：已执行 sql/mdm/init.sql
+-- 依赖：已部署 Flowable 流程 demo_single_approval（演示单人审批，
+--       见 doc/demo-script.md 或流程设计器/API /mdm/audit/flowable/deploy）
 -- 幂等：可重复执行（先清理再插入）
 -- ============================================================
 
--- ---------- 示例对象：客户 customer（演示启用审核） ----------
+-- ---------- 示例对象：客户 customer（演示启用审核：1.1.0 起走 Flowable） ----------
 set @oid = (select object_id from mdm_object where object_code = 'customer' limit 1);
 delete from mdm_audit_flow where object_id = @oid;
 delete from mdm_code_rule_segment where rule_id in (select rule_id from mdm_code_rule where object_id = @oid);
@@ -16,8 +18,8 @@ delete from mdm_audit_task where object_id = @oid;
 drop table if exists mdm_data_customer;
 delete from mdm_object where object_code = 'customer';
 
-insert into mdm_object (object_code, object_name, category_id, status, version, order_num, create_by, create_time)
-values ('customer', '客户', 0, '1', '1.0', 1, 'system', sysdate());
+insert into mdm_object (object_code, object_name, category_id, status, version, order_num, audit_process_key, create_by, create_time)
+values ('customer', '客户', 0, '1', '1.0', 1, 'demo_single_approval', 'system', sysdate());
 set @oid = last_insert_id();
 
 insert into mdm_attribute (object_id, attr_code, attr_name, data_type, required_flag, unique_flag, source_type, enum_values, order_num, status, create_by, create_time) values
@@ -35,9 +37,8 @@ insert into mdm_code_rule_segment (rule_id, seg_type, seg_value, order_num) valu
 (@rid, 'DATE',     'yyyyMMdd',   2),
 (@rid, 'SEQUENCE', '4',          3);
 
-insert into mdm_audit_flow (object_id, enabled, audit_role, create_by, create_time)
-values (@oid, '1', 'admin', 'system', sysdate());
-
+-- 1.1.0 起废弃 mdm_audit_flow（旧轻量审核），审核由 Flowable 承载：
+-- 对象绑定 audit_process_key（见上方 insert），流程定义经设计器/API 部署
 create table mdm_data_customer (
   id          bigint(20)   not null auto_increment comment '主键',
   object_code varchar(50)  not null comment '对象编码',

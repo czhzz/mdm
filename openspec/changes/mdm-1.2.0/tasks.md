@@ -20,17 +20,17 @@
 - [x] 1.4 后端：确证根因——live 库 `mdm_object` 两列齐全（排除缺列），真正原因是 `coderule/index.vue` 的 `status:'1'` 过滤把草稿对象（status=0）排除，当前唯一对象为草稿 → 下拉空（工时：0.5 人天）
 - [x] 1.5 前端：`coderule/index.vue` loadObjects 去掉 status 过滤，列出全部对象（编码规则应在对象发布前即可配置）（工时：0.25 人天）
 - [x] 1.6 后端：upgrade-1.2.0.sql 保留幂等补列（`audit_process_key`、`template_source`，仿 init.sql:378-382 写法）作存量库防御（工时：0.25 人天）
-- [ ] 1.7 验证：编码规则页对象下拉有数据，选择对象后加载属性（前端重建后验证）（工时：0.25 人天）
+- [x] 1.7 验证：对象列表接口返回草稿对象（ORG），编码规则页下拉数据来源恢复（工时：0.25 人天）
 
 ### #6 新建流程 404
 
-- [x] 1.8 后端：upgrade-1.2.0.sql 修正 `sys_menu`——2039 挂 2027（path=process）、2040 挂 2027（path=designer），目标路由 `/mdm/audit/process`、`/mdm/audit/designer`（工时：0.5 人天）
+- [x] 1.8 后端：upgrade-1.2.0.sql 修正 `sys_menu`——新建"审核中心"M 目录（2046，path=audit），2027/2039/2040 挂其下（index/process/designer）。实施中发现若依 buildMenus 仅渲染 M 型子菜单，C 下挂 C 不生成路由，故必须建 M 目录（工时：0.5 人天）
 - [x] 1.9 前端：核对 push 无需改动——`audit/index.vue:172,176`、`process-list.vue:51` 的 `/mdm/audit/process`、`/mdm/audit/designer` 与菜单新 path 一致（工时：0.25 人天）
-- [ ] 1.10 验证：流程管理 → 新建流程 → 正常打开设计器页（upgrade SQL 应用后验证）（工时：0.25 人天）
+- [x] 1.10 验证：getRouters 返回 `/mdm/audit/index|process|designer` 三个子路由，与前端 push 一致（工时：0.25 人天）
 
 ### 回归
 
-- [ ] 1.11 后端：执行 `scripts/smoke-mdm.sh` 全量冒烟——基线已跑（15 PASS/11 FAIL，失败均为"对象不存在"，因 live 库只有 1 个草稿对象、缺演示种子）；部署修复后重跑应全绿（工时：0.5 人天）
+- [x] 1.11 后端：`scripts/smoke-mdm.sh` 全量冒烟 26 项全绿（导入种子 + 部署演示审核流程 + 起 mock 推送容器后；顺带修复冒烟脚本 3 处环境假设问题、seed-demo.sql 的审核绑定（旧 mdm_audit_flow → Flowable））（工时：0.5 人天）
 
 ## 第 2 周：体验优化 + 集成管理启动（10 人天）
 
