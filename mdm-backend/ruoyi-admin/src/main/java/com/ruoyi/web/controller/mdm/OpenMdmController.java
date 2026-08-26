@@ -20,8 +20,8 @@ import com.ruoyi.common.annotation.Anonymous;
 import com.ruoyi.common.core.controller.BaseController;
 import com.ruoyi.common.core.domain.AjaxResult;
 import com.ruoyi.common.utils.StringUtils;
-import com.ruoyi.mdm.distribution.domain.MdmApp;
-import com.ruoyi.mdm.distribution.service.IDistributionService;
+import com.ruoyi.mdm.integration.domain.MdmApp;
+import com.ruoyi.mdm.integration.service.IIntegrationService;
 import com.ruoyi.mdm.maintenance.service.IMdmDataService;
 
 /**
@@ -41,7 +41,7 @@ public class OpenMdmController extends BaseController
     private static final long WINDOW_MS = 5 * 60 * 1000L;
 
     @Autowired
-    private IDistributionService distributionService;
+    private IIntegrationService integrationService;
 
     @Autowired
     private IMdmDataService dataService;
@@ -105,7 +105,7 @@ public class OpenMdmController extends BaseController
         {
             return error("recordId 不能为空");
         }
-        return toAjax(distributionService.confirmRecord(recordId));
+        return toAjax(integrationService.confirmRecord(recordId));
     }
 
     /**
@@ -120,7 +120,7 @@ public class OpenMdmController extends BaseController
         {
             return unauthorized(response);
         }
-        MdmApp app = distributionService.getAppByAppid(appid);
+        MdmApp app = integrationService.getAppByAppid(appid);
         if (app == null || !"1".equals(app.getEnabled()))
         {
             return unauthorized(response);

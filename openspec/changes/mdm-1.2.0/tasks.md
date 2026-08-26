@@ -55,14 +55,14 @@
 
 ## 第 3 周：集成管理完成（10 人天）
 
-- [ ] 3.1 后端：应用管理——`MdmDistributionController`（ruoyi-admin）迁入 integration 包，app 部分接口路径改为 `/mdm/integration/app`，对齐原 distribution.ts 语义（工时：1 人天）
-- [ ] 3.2 后端：接收接口管理——配置 CRUD + 对外 `POST /open/integration/receive/{apiCode}`（appid/secret 鉴权、按 dataCode 幂等 upsert、柔性落库：绑定审核流程则提交审核否则直接生效、source=API:appCode、写日志）（工时：2 人天）
-- [ ] 3.3 后端：查询接口管理——配置 CRUD + 对外 `POST /open/integration/query/{apiCode}`（条件查询动态表，appid/secret 鉴权，写日志）（工时：2 人天）
-- [ ] 3.4 后端：分发管理——`MdmDistributionController`（ruoyi-admin）迁入 integration 包，命名统一 `/mdm/integration/distribute/config|monitor`；读写改 `mdm_distribute_api` + `mdm_distribute_log`（重推按日志 id，payload 完整保留不截断），MQ/HTTP 双通道核心逻辑不动（工时：2 人天）
-- [ ] 3.5 后端：集成日志——三张日志表写入点接入（receive/query/distribute 各写各表）+ `/mdm/integration/log/{receive|query|distribute}/list` 分页 + `/mdm/integration/log/clean`（type 参数指定表）手动清理（工时：1.5 人天）
-- [ ] 3.6 前端：`views/mdm/integration/` 五个页面（若依标准列表 + 弹窗表单；分发管理含配置/监控两 Tab，集成日志含接收/查询/分发三 Tab）（工时：2.5 人天）
-- [ ] 3.7 后端：upgrade-1.2.0.sql 登记集成管理一级目录 + 5 子菜单 sys_menu（权限标识 `mdm:integration:*`），停用原分发菜单（工时：0.5 人天）
-- [ ] 3.8 后端：旧 `distribution` 包、`views/mdm/distribution/`、`api/mdm/distribution.ts` 迁移完成后删除（删除前与用户确认）（工时：0.25 人天）
+- [x] 3.1 后端：应用管理——`MdmDistributionController`（ruoyi-admin）迁入 integration 包（`IntegrationAppController`），接口路径改为 `/mdm/integration/app`，对齐原 distribution.ts 语义；`OpenMdmController` 引用同步切到 integration 版（工时：1 人天）
+- [x] 3.2 后端：接收接口管理——`IntegrationReceiveController` CRUD + 对外 `POST /open/integration/receive/{apiCode}`（ApiAuthFilter appid/secret 鉴权、dataCode 映射对象唯一属性幂等 upsert、柔性落库：绑定审核流程则提交审核否则直接生效、source=API:appCode、写 mdm_receive_log）（工时：2 人天）
+- [x] 3.3 后端：查询接口管理——`IntegrationQueryController` CRUD + 对外 `POST /open/integration/query/{apiCode}`（条件查询动态表，ApiAuthFilter 鉴权，写 mdm_query_log）（工时：2 人天）
+- [x] 3.4 后端：分发管理——`IntegrationDistributeController` 命名统一 `/mdm/integration/distribute/config|monitor`；读写改 `mdm_distribute_api` + `mdm_distribute_log`（重推按日志 id，payload 完整保留不截断），MQ/HTTP 双通道核心逻辑不动；`MdmDataServiceImpl.triggerPush` 引用切 integration 版（修复 RENAME 后旧表不存在的回归）（工时：2 人天）
+- [x] 3.5 后端：集成日志——`IntegrationLogController` 三表分页 list + 失败重推 + `/mdm/integration/log/clean`（type 参数指定表）手动清理（工时：1.5 人天）
+- [x] 3.6 前端：`views/mdm/integration/` 五个页面（若依标准列表 + 弹窗表单；分发管理含配置/监控两 Tab，集成日志含接收/查询/分发三 Tab + 清理按钮）（工时：2.5 人天）
+- [x] 3.7 后端：upgrade-1.2.0.sql 登记集成管理一级目录（2047）+ 5 子菜单（2048-2052）+ 按钮权限（2053-2070），停用原分发菜单（2006/2041），admin 角色授权（工时：0.5 人天）
+- [x] 3.8 后端：旧 `distribution` 包、`MdmDistributionController`、旧 mapper XML、`views/mdm/distribution/`、`api/mdm/distribution.ts` 已删除（用户确认）；RabbitMQConfig Bean 声明并入 integration 版，`OpenMdmController` 引用已切换（工时：0.25 人天）
 
 ## 第 4 周：联调 + 回归 + 发布（10 人天）
 

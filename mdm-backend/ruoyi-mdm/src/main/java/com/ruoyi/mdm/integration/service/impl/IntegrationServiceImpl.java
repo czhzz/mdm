@@ -27,11 +27,23 @@ import com.ruoyi.mdm.integration.config.RabbitMQConfig;
 import com.ruoyi.mdm.integration.domain.MdmApp;
 import com.ruoyi.mdm.integration.domain.MdmDistributeApi;
 import com.ruoyi.mdm.integration.domain.MdmDistributeLog;
+import com.ruoyi.mdm.integration.domain.MdmQueryApi;
+import com.ruoyi.mdm.integration.domain.MdmQueryLog;
+import com.ruoyi.mdm.integration.domain.MdmReceiveApi;
+import com.ruoyi.mdm.integration.domain.MdmReceiveLog;
 import com.ruoyi.mdm.integration.mapper.MdmAppMapper;
 import com.ruoyi.mdm.integration.mapper.MdmDistributeApiMapper;
 import com.ruoyi.mdm.integration.mapper.MdmDistributeLogMapper;
+import com.ruoyi.mdm.integration.mapper.MdmQueryApiMapper;
+import com.ruoyi.mdm.integration.mapper.MdmQueryLogMapper;
+import com.ruoyi.mdm.integration.mapper.MdmReceiveApiMapper;
+import com.ruoyi.mdm.integration.mapper.MdmReceiveLogMapper;
 import com.ruoyi.mdm.integration.service.IIntegrationService;
+import com.ruoyi.mdm.audit.service.IMdmAuditFlowableService;
+import com.ruoyi.mdm.maintenance.service.IMdmDataService;
+import com.ruoyi.mdm.model.domain.MdmAttribute;
 import com.ruoyi.mdm.model.domain.MdmObject;
+import com.ruoyi.mdm.model.mapper.MdmAttributeMapper;
 import com.ruoyi.mdm.model.mapper.MdmObjectMapper;
 
 /**
@@ -56,6 +68,27 @@ public class IntegrationServiceImpl implements IIntegrationService
 
     @Autowired
     private MdmObjectMapper objectMapper;
+
+    @Autowired
+    private MdmAttributeMapper attributeMapper;
+
+    @Autowired
+    private MdmReceiveApiMapper receiveApiMapper;
+
+    @Autowired
+    private MdmQueryApiMapper queryApiMapper;
+
+    @Autowired
+    private MdmReceiveLogMapper receiveLogMapper;
+
+    @Autowired
+    private MdmQueryLogMapper queryLogMapper;
+
+    @Autowired
+    private IMdmDataService dataService;
+
+    @Autowired
+    private IMdmAuditFlowableService auditFlowableService;
 
     @Autowired
     private RabbitTemplate rabbitTemplate;
@@ -219,6 +252,309 @@ public class IntegrationServiceImpl implements IIntegrationService
         return recordMapper.updateConfirm(confirm);
     }
 
+    // ===== 接收接口配置 =====
+
+    @Override
+    public List<MdmReceiveApi> listReceiveApi(MdmReceiveApi query)
+    {
+        return receiveApiMapper.selectList(query);
+    }
+
+    @Override
+    public MdmReceiveApi getReceiveApi(Long id)
+    {
+        return receiveApiMapper.selectById(id);
+    }
+
+    @Override
+    public int addReceiveApi(MdmReceiveApi mdmReceiveApi)
+    {
+        if (StringUtils.isEmpty(mdmReceiveApi.getApiCode()) || StringUtils.isEmpty(mdmReceiveApi.getObjectCode()))
+        {
+            throw new ServiceException("接口编码与目标对象不能为空");
+        }
+        if (receiveApiMapper.selectByApiCode(mdmReceiveApi.getApiCode()) != null)
+        {
+            throw new ServiceException("接口编码已存在：" + mdmReceiveApi.getApiCode());
+        }
+        mdmReceiveApi.setStatus(StringUtils.isEmpty(mdmReceiveApi.getStatus()) ? "0" : mdmReceiveApi.getStatus());
+        mdmReceiveApi.setCreateBy(SecurityUtils.getUsername());
+        return receiveApiMapper.insert(mdmReceiveApi);
+    }
+
+    @Override
+    public int editReceiveApi(MdmReceiveApi mdmReceiveApi)
+    {
+        mdmReceiveApi.setUpdateBy(SecurityUtils.getUsername());
+        return receiveApiMapper.update(mdmReceiveApi);
+    }
+
+    @Override
+    public int deleteReceiveApis(Long[] ids)
+    {
+        return receiveApiMapper.deleteByIds(ids);
+    }
+
+    // ===== 查询接口配置 =====
+
+    @Override
+    public List<MdmQueryApi> listQueryApi(MdmQueryApi query)
+    {
+        return queryApiMapper.selectList(query);
+    }
+
+    @Override
+    public MdmQueryApi getQueryApi(Long id)
+    {
+        return queryApiMapper.selectById(id);
+    }
+
+    @Override
+    public int addQueryApi(MdmQueryApi mdmQueryApi)
+    {
+        if (StringUtils.isEmpty(mdmQueryApi.getApiCode()) || StringUtils.isEmpty(mdmQueryApi.getObjectCode()))
+        {
+            throw new ServiceException("接口编码与目标对象不能为空");
+        }
+        if (queryApiMapper.selectByApiCode(mdmQueryApi.getApiCode()) != null)
+        {
+            throw new ServiceException("接口编码已存在：" + mdmQueryApi.getApiCode());
+        }
+        mdmQueryApi.setStatus(StringUtils.isEmpty(mdmQueryApi.getStatus()) ? "0" : mdmQueryApi.getStatus());
+        mdmQueryApi.setCreateBy(SecurityUtils.getUsername());
+        return queryApiMapper.insert(mdmQueryApi);
+    }
+
+    @Override
+    public int editQueryApi(MdmQueryApi mdmQueryApi)
+    {
+        mdmQueryApi.setUpdateBy(SecurityUtils.getUsername());
+        return queryApiMapper.update(mdmQueryApi);
+    }
+
+    @Override
+    public int deleteQueryApis(Long[] ids)
+    {
+        return queryApiMapper.deleteByIds(ids);
+    }
+
+    // ===== 集成日志 =====
+
+    @Override
+    public List<MdmReceiveLog> listReceiveLog(MdmReceiveLog query)
+    {
+        return receiveLogMapper.selectList(query);
+    }
+
+    @Override
+    public List<MdmQueryLog> listQueryLog(MdmQueryLog query)
+    {
+        return queryLogMapper.selectList(query);
+    }
+
+    @Override
+    public int cleanLog(String type, String beforeTime)
+    {
+        if (StringUtils.isEmpty(beforeTime))
+        {
+            throw new ServiceException("截止时间不能为空");
+        }
+        switch (type)
+        {
+            case "receive":
+                return receiveLogMapper.deleteBeforeTime(beforeTime);
+            case "query":
+                return queryLogMapper.deleteBeforeTime(beforeTime);
+            case "distribute":
+                return recordMapper.deleteBeforeTime(beforeTime);
+            default:
+                throw new ServiceException("不支持的日志类型：" + type + "（receive|query|distribute）");
+        }
+    }
+
+    // ===== 对外接收 / 查询 =====
+
+    @Override
+    public Map<String, Object> receive(String apiCode, String dataCode, Map<String, Object> data,
+            String appCode, String ip)
+    {
+        MdmReceiveApi api = receiveApiMapper.selectByApiCode(apiCode);
+        if (api == null)
+        {
+            throw new ServiceException("接收接口不存在：" + apiCode);
+        }
+        if (!"0".equals(api.getStatus()))
+        {
+            throw new ServiceException("接收接口已停用：" + apiCode);
+        }
+        String objectCode = api.getObjectCode();
+        MdmObject object = objectMapper.checkObjectCodeUnique(objectCode);
+        if (object == null || !"1".equals(object.getStatus()))
+        {
+            throw new ServiceException("目标数据对象未发布：" + objectCode);
+        }
+        long start = System.currentTimeMillis();
+        Map<String, Object> result = new LinkedHashMap<>();
+        try
+        {
+            // 幂等键：dataCode 映射对象唯一属性（primaryFlag 优先，其次 uniqueFlag）
+            String uniqueCol = findUniqueColumn(object.getObjectId());
+            Long existId = null;
+            if (uniqueCol != null && StringUtils.isNotEmpty(dataCode))
+            {
+                data.put(uniqueCol, dataCode);
+                List<Map<String, Object>> rows = dataService.selectDataList(objectCode,
+                        new LinkedHashMap<String, Object>()
+                        {
+                            private static final long serialVersionUID = 1L;
+                            {
+                                put(uniqueCol, dataCode);
+                            }
+                        }, 1, 1);
+                if (!rows.isEmpty())
+                {
+                    existId = Long.valueOf(String.valueOf(rows.get(0).get("id")));
+                }
+            }
+            boolean update = existId != null;
+            if (update)
+            {
+                dataService.updateData(objectCode, existId, data);
+            }
+            else
+            {
+                dataService.insertDataWithSource(objectCode, data, "API:" + appCode);
+            }
+            // 柔性落库：绑定审核流程则提交审核，否则直接生效
+            boolean auditEnabled = StringUtils.isNotEmpty(object.getAuditProcessKey());
+            if (auditEnabled)
+            {
+                auditFlowableService.submitAudit(objectCode, update ? existId : 0L, update ? "UPDATE" : "INSERT", data);
+            }
+            else if (!update)
+            {
+                // 直接生效（插入成功后按唯一键回查 id 置生效）
+                if (uniqueCol != null)
+                {
+                    List<Map<String, Object>> rows = dataService.selectDataList(objectCode,
+                            new LinkedHashMap<String, Object>()
+                            {
+                                private static final long serialVersionUID = 1L;
+                                {
+                                    put(uniqueCol, dataCode);
+                                }
+                            }, 1, 1);
+                    if (!rows.isEmpty())
+                    {
+                        dataService.updateDataStatus(objectCode, Long.valueOf(String.valueOf(rows.get(0).get("id"))), "1");
+                    }
+                }
+            }
+            result.put("success", true);
+            result.put("message", update ? "更新成功" : (auditEnabled ? "接收成功，已提交审核" : "接收成功"));
+            writeReceiveLog(api, dataCode, appCode, ip, "0", null, start);
+            return result;
+        }
+        catch (Exception e)
+        {
+            writeReceiveLog(api, dataCode, appCode, ip, "1", e.getMessage(), start);
+            throw e;
+        }
+    }
+
+    @Override
+    public Map<String, Object> queryOpen(String apiCode, Map<String, Object> filters, int pageNum,
+            int pageSize, String appCode, String ip)
+    {
+        MdmQueryApi api = queryApiMapper.selectByApiCode(apiCode);
+        if (api == null)
+        {
+            throw new ServiceException("查询接口不存在：" + apiCode);
+        }
+        if (!"0".equals(api.getStatus()))
+        {
+            throw new ServiceException("查询接口已停用：" + apiCode);
+        }
+        long start = System.currentTimeMillis();
+        try
+        {
+            List<Map<String, Object>> rows = dataService.selectDataList(api.getObjectCode(), filters, pageNum, pageSize);
+            long total = dataService.countData(api.getObjectCode(), filters);
+            Map<String, Object> result = new LinkedHashMap<>();
+            result.put("total", total);
+            result.put("rows", rows);
+            MdmQueryLog log = new MdmQueryLog();
+            log.setAppCode(appCode);
+            log.setObjectCode(api.getObjectCode());
+            log.setSuccess("0");
+            log.setCostMs((int) (System.currentTimeMillis() - start));
+            log.setIp(ip);
+            log.setResultCount(rows.size());
+            log.setRequestSummary(truncate(filters == null ? "" : filters.toString(), 500));
+            queryLogMapper.insert(log);
+            return result;
+        }
+        catch (Exception e)
+        {
+            MdmQueryLog log = new MdmQueryLog();
+            log.setAppCode(appCode);
+            log.setObjectCode(api.getObjectCode());
+            log.setSuccess("1");
+            log.setErrorMsg(truncate(e.getMessage(), 2000));
+            log.setCostMs((int) (System.currentTimeMillis() - start));
+            log.setIp(ip);
+            log.setResultCount(0);
+            queryLogMapper.insert(log);
+            throw e;
+        }
+    }
+
+    /** 幂等键列：主属性优先，其次首个唯一属性；无唯一属性返回 null（无法幂等，仅追加） */
+    private String findUniqueColumn(Long objectId)
+    {
+        MdmAttribute query = new MdmAttribute();
+        query.setObjectId(objectId);
+        List<MdmAttribute> attrs = attributeMapper.selectAttributeList(query);
+        for (MdmAttribute a : attrs)
+        {
+            if ("Y".equals(a.getPrimaryFlag()))
+            {
+                return a.getAttrCode();
+            }
+        }
+        for (MdmAttribute a : attrs)
+        {
+            if ("Y".equals(a.getUniqueFlag()))
+            {
+                return a.getAttrCode();
+            }
+        }
+        return null;
+    }
+
+    private void writeReceiveLog(MdmReceiveApi api, String dataCode, String appCode, String ip,
+            String success, String error, long start)
+    {
+        MdmReceiveLog log = new MdmReceiveLog();
+        log.setAppCode(appCode);
+        log.setObjectCode(api.getObjectCode());
+        log.setBusinessCode(dataCode);
+        log.setSuccess(success);
+        log.setErrorMsg(truncate(error, 2000));
+        log.setCostMs((int) (System.currentTimeMillis() - start));
+        log.setIp(ip);
+        receiveLogMapper.insert(log);
+    }
+
+    private String truncate(String s, int max)
+    {
+        if (StringUtils.isEmpty(s))
+        {
+            return null;
+        }
+        return s.length() > max ? s.substring(0, max) : s;
+    }
+
     // ===== 内嵌分发器 =====
 
     @Override
@@ -254,7 +590,7 @@ public class IntegrationServiceImpl implements IIntegrationService
             record.setEndpointUrl(config.getEndpointUrl());
             record.setPayload(payload);
             record.setStatus("0");
-            record.setCreateBy(SecurityUtils.getUsername());
+            record.setCreateBy(currentUsername());
             recordMapper.insertRecord(record);
             // 1.1.0：按通道分流——HTTP 走线程池推送，MQ 走 RabbitMQ 消息
             if ("MQ".equalsIgnoreCase(config.getChannel()))
@@ -266,6 +602,19 @@ public class IntegrationServiceImpl implements IIntegrationService
                 // 异步推送，订阅方不可用不阻塞主流程
                 PUSH_EXECUTOR.submit(() -> send(record, false));
             }
+        }
+    }
+
+    /** 当前操作人（匿名场景——对外接口——无登录用户，回退 "API"） */
+    private String currentUsername()
+    {
+        try
+        {
+            return SecurityUtils.getUsername();
+        }
+        catch (Exception e)
+        {
+            return "API";
         }
     }
 

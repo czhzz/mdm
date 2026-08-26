@@ -20,7 +20,7 @@ import com.ruoyi.common.utils.SecurityUtils;
 import com.ruoyi.common.utils.StringUtils;
 import com.ruoyi.mdm.coderule.domain.MdmCodeRule;
 import com.ruoyi.mdm.coderule.service.IMdmCodeRuleService;
-import com.ruoyi.mdm.distribution.service.IDistributionService;
+import com.ruoyi.mdm.integration.service.IIntegrationService;
 import com.ruoyi.mdm.maintenance.service.IMdmDataService;
 import com.ruoyi.mdm.model.domain.MdmAttribute;
 import com.ruoyi.mdm.model.domain.MdmObject;
@@ -61,8 +61,9 @@ public class MdmDataServiceImpl implements IMdmDataService
     @Autowired
     private MdmQualityRuleMapper qualityRuleMapper;
 
+    // 1.2.0：分发通道迁入 integration 包（旧 distribution 包随表更名废弃）
     @Autowired
-    private IDistributionService distributionService;
+    private IIntegrationService integrationService;
 
     @Autowired
     private MdmRelationMapper relationMapper;
@@ -112,15 +113,17 @@ public class MdmDataServiceImpl implements IMdmDataService
         if (StringUtils.isNotNull(object))
         {
             MdmCodeRule rule = codeRuleService.selectRuleByObjectId(object.getObjectId());
+            // 编码仅在为空时生成：外部系统（导入/API 接收）传入的业务编码优先，不被覆盖
             if (StringUtils.isNotNull(rule) && StringUtils.isNotEmpty(rule.getCodeField())
-                    && table.columns.contains(rule.getCodeField()))
+                    && table.columns.contains(rule.getCodeField())
+                    && StringUtils.isEmpty(String.valueOf(data.get(rule.getCodeField()) == null ? "" : data.get(rule.getCodeField()))))
             {
                 data.put(rule.getCodeField(), codeRuleService.generateCode(rule, data));
             }
         }
         validateData(table, data, null, null);
         Long pk = doInsert(table, objectCode, "0", pickColumns(table, data));
-        distributionService.triggerPush(objectCode, pk, "INSERT", data);
+        integrationService.triggerPush(objectCode, pk, "INSERT", data);
         return pk > 0 ? 1 : 0;
     }
 
@@ -128,12 +131,22 @@ public class MdmDataServiceImpl implements IMdmDataService
     public int insertDataWithSource(String objectCode, Map<String, Object> data, String source)
     {
         // 1.1.0：带来源标记的插入（导入/API 推送用）
-        if (source != null)
+        // 1.0 时代种子表无 source 列，先探测再写，避免 SQL 报错
+        if (source != null && tableHasColumn("mdm_data_" + objectCode, "source"))
         {
             data.put("source", source);
             data.put("source_time", new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new java.util.Date()));
         }
         return insertData(objectCode, data);
+    }
+
+    /** 探测数据表是否含指定列（存量库兼容：1.0 种子表缺血缘列） */
+    private boolean tableHasColumn(String tableName, String columnName)
+    {
+        Integer count = jdbcTemplate.queryForObject(
+                "SELECT COUNT(1) FROM information_schema.columns WHERE table_schema = database() AND table_name = ? AND column_name = ?",
+                Integer.class, tableName, columnName);
+        return count != null && count > 0;
     }
 
     @Override
@@ -157,11 +170,11 @@ public class MdmDataServiceImpl implements IMdmDataService
         }
         sets.add("update_by = ?");
         sets.add("update_time = sysdate()");
-        vals.add(SecurityUtils.getUsername());
+        vals.add(currentUsername());
         vals.add(id);
         String sql = "UPDATE " + table.tableName + " SET " + String.join(", ", sets) + " WHERE id = ?";
         int rows = jdbcTemplate.update(sql, vals.toArray());
-        distributionService.triggerPush(objectCode, id, "UPDATE", data);
+        integrationService.triggerPush(objectCode, id, "UPDATE", data);
         return rows;
     }
 
@@ -224,7 +237,7 @@ public class MdmDataServiceImpl implements IMdmDataService
         }
         validateData(table, data, null, null);
         Long pk = doInsert(table, objectCode, "1", pickColumns(table, data));
-        distributionService.triggerPush(objectCode, pk, "INSERT", data);
+        integrationService.triggerPush(objectCode, pk, "INSERT", data);
         return pk > 0 ? 1 : 0;
     }
 
@@ -277,7 +290,22 @@ public class MdmDataServiceImpl implements IMdmDataService
         }
         return jdbcTemplate.update("UPDATE " + table.tableName
                         + " SET status = ?, update_by = ?, update_time = sysdate() WHERE id = ?",
-                status, SecurityUtils.getUsername(), id);
+                status, currentUsername(), id);
+    }
+
+    /**
+     * 当前操作人（匿名场景——集成对外接口——无登录用户，回退 "API"）
+     */
+    private String currentUsername()
+    {
+        try
+        {
+            return SecurityUtils.getUsername();
+        }
+        catch (Exception e)
+        {
+            return "API";
+        }
     }
 
     /**
@@ -370,6 +398,23 @@ public class MdmDataServiceImpl implements IMdmDataService
         return picked;
     }
 
+    /** 业务编码：唯一/主属性值优先，缺省用对象编码（兼容无唯一属性的对象） */
+    private String businessCode(MdmTable table, Map<String, Object> cols, String fallback)
+    {
+        for (MdmAttribute a : table.attributes)
+        {
+            if ("Y".equals(a.getUniqueFlag()) || "Y".equals(a.getPrimaryFlag()))
+            {
+                Object v = cols.get(a.getAttrCode());
+                if (v != null && StringUtils.isNotEmpty(String.valueOf(v)))
+                {
+                    return String.valueOf(v);
+                }
+            }
+        }
+        return fallback;
+    }
+
     /** 动态插入并返回自增主键 */
     private Long doInsert(MdmTable table, String objectCode, String status, Map<String, Object> cols)
     {
@@ -380,10 +425,12 @@ public class MdmDataServiceImpl implements IMdmDataService
         sql.append(String.join(", ", repeat("?", cols.size())));
         sql.append(", ?, sysdate())");
         List<Object> params = new ArrayList<>();
-        params.add(objectCode);
+        // 1.2.0 修复：object_code 列语义为业务编码（唯一/主属性值），
+        // 旧实现写入对象编码导致 uk_object_code 唯一约束下每对象仅一条数据
+        params.add(businessCode(table, cols, objectCode));
         params.add(status);
         params.addAll(cols.values());
-        params.add(SecurityUtils.getUsername());
+        params.add(currentUsername());
         KeyHolder keyHolder = new GeneratedKeyHolder();
         jdbcTemplate.update(conn ->
         {

@@ -126,7 +126,17 @@ public class MdmAuditFlowableServiceImpl implements IMdmAuditFlowableService
         variables.put("dataId", dataId);
         variables.put("actionType", actionType);
         variables.put("data", data);
-        variables.put("submitter", SecurityUtils.getUsername());
+        // 1.2.0：匿名场景（集成接收接口提交审核）无登录用户，回退 "API"
+        String submitter;
+        try
+        {
+            submitter = SecurityUtils.getUsername();
+        }
+        catch (Exception e)
+        {
+            submitter = "API";
+        }
+        variables.put("submitter", submitter);
         // 启动流程实例
         ProcessInstance pi = runtimeService.startProcessInstanceByKey(processKey,
                 objectCode + "_" + dataId + "_" + System.currentTimeMillis(), variables);

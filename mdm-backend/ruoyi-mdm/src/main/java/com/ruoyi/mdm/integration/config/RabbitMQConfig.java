@@ -2,15 +2,27 @@ package com.ruoyi.mdm.integration.config;
 
 import java.util.HashMap;
 import java.util.Map;
+import org.springframework.amqp.core.Binding;
+import org.springframework.amqp.core.BindingBuilder;
+import org.springframework.amqp.core.Queue;
+import org.springframework.amqp.core.QueueBuilder;
+import org.springframework.amqp.core.TopicExchange;
+import org.springframework.amqp.rabbit.connection.ConnectionFactory;
+import org.springframework.amqp.rabbit.core.RabbitAdmin;
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
+import org.springframework.amqp.support.converter.Jackson2JsonMessageConverter;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
 
 /**
- * RabbitMQ 分发通道常量（integration 版）
+ * RabbitMQ 分发通道配置（1.2.0 自 distribution 迁入，旧包已删除）
  *
- * <p>Bean 声明暂由 distribution.config.RabbitMQConfig 提供（旧包待删），
- * 旧包删除时将 @Configuration 与 Bean 声明并回本类。
+ * <p>Topic Exchange `mdm.distribution` + 死信交换机 `mdm.distribution.dlx`。
+ * 订阅方队列由配置动态声明（分发配置保存时），此处只声明基础设施。
  *
  * @author ruoyi
  */
+@Configuration
 public class RabbitMQConfig
 {
     /** 分发主题交换机 */
@@ -24,6 +36,55 @@ public class RabbitMQConfig
 
     /** 路由键前缀：mdm.dist.<objectCode> */
     public static final String ROUTING_KEY_PREFIX = "mdm.dist.";
+
+    @Bean
+    public TopicExchange distributionExchange()
+    {
+        return new TopicExchange(EXCHANGE, true, false);
+    }
+
+    @Bean
+    public TopicExchange distributionDlxExchange()
+    {
+        return new TopicExchange(DLX_EXCHANGE, true, false);
+    }
+
+    /**
+     * 死信队列：订阅方消费失败（NACK）的消息进入此队列，定时任务扫描重推
+     */
+    @Bean
+    public Queue distributionDlxQueue()
+    {
+        return QueueBuilder.durable(DLX_QUEUE).build();
+    }
+
+    @Bean
+    public Binding distributionDlxBinding()
+    {
+        return BindingBuilder.bind(distributionDlxQueue()).to(distributionDlxExchange()).with("#");
+    }
+
+    @Bean
+    public Jackson2JsonMessageConverter jsonMessageConverter()
+    {
+        return new Jackson2JsonMessageConverter();
+    }
+
+    @Bean
+    public RabbitTemplate rabbitTemplate(ConnectionFactory connectionFactory)
+    {
+        RabbitTemplate template = new RabbitTemplate(connectionFactory);
+        template.setMessageConverter(jsonMessageConverter());
+        template.setMandatory(true);
+        return template;
+    }
+
+    /** RabbitAdmin 用于动态声明订阅方队列（Spring Boot 不会自动创建） */
+    @Bean
+    public RabbitAdmin rabbitAdmin(ConnectionFactory connectionFactory)
+    {
+        return new RabbitAdmin(connectionFactory);
+    }
 
     /**
      * 动态声明订阅方队列（分发配置启用 MQ 通道时调用）

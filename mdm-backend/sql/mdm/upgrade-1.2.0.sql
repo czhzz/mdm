@@ -147,3 +147,66 @@ create table if not exists mdm_query_log (
   key idx_app_time (app_code, create_time),
   key idx_object_time (object_code, create_time)
 ) engine=innodb auto_increment=1 comment = '查询接口日志表';
+
+-- ---------------------------------------------------------------------
+-- 四、#3 集成管理菜单（第 3 周）
+-- 一级目录"集成管理"（2047）+ 5 子菜单（2048-2052）+ 按钮权限（2053-2072）
+-- 停用原分发菜单（2006/2041，status=1 不删除数据）；admin 角色（role_id=1）自动授权
+-- 注意：sys_menu 共 20 列（含 route_name，位于 query 之后），勿漏
+-- ---------------------------------------------------------------------
+insert into sys_menu (menu_id, menu_name, parent_id, order_num, path, component, query, route_name, is_frame, is_cache, menu_type, visible, status, perms, icon, create_by, create_time, update_by, update_time, remark)
+select '2047', '集成管理', '2000', '8', 'integration', '', '', '', '1', '0', 'M', '0', '0', '', 'guide', 'admin', sysdate(), '', null, '集成管理目录（1.2.0）'
+from dual where not exists (select 1 from sys_menu where menu_id = '2047');
+
+insert into sys_menu (menu_id, menu_name, parent_id, order_num, path, component, query, route_name, is_frame, is_cache, menu_type, visible, status, perms, icon, create_by, create_time, update_by, update_time, remark)
+select '2048', '应用管理', '2047', '1', 'app', 'mdm/integration/app/index', '', '', '1', '0', 'C', '0', '0', 'mdm:integration:app:list', 'user', 'admin', sysdate(), '', null, '接入方应用与凭证（1.2.0）'
+from dual where not exists (select 1 from sys_menu where menu_id = '2048');
+
+insert into sys_menu (menu_id, menu_name, parent_id, order_num, path, component, query, route_name, is_frame, is_cache, menu_type, visible, status, perms, icon, create_by, create_time, update_by, update_time, remark)
+select '2049', '接收接口管理', '2047', '2', 'receive', 'mdm/integration/receive/index', '', '', '1', '0', 'C', '0', '0', 'mdm:integration:receive:list', 'inbox', 'admin', sysdate(), '', null, '平台向外部提供的接收接口（1.2.0）'
+from dual where not exists (select 1 from sys_menu where menu_id = '2049');
+
+insert into sys_menu (menu_id, menu_name, parent_id, order_num, path, component, query, route_name, is_frame, is_cache, menu_type, visible, status, perms, icon, create_by, create_time, update_by, update_time, remark)
+select '2050', '查询接口管理', '2047', '3', 'query', 'mdm/integration/query/index', '', '', '1', '0', 'C', '0', '0', 'mdm:integration:query:list', 'search', 'admin', sysdate(), '', null, '开放给外部的数据查询接口（1.2.0）'
+from dual where not exists (select 1 from sys_menu where menu_id = '2050');
+
+insert into sys_menu (menu_id, menu_name, parent_id, order_num, path, component, query, route_name, is_frame, is_cache, menu_type, visible, status, perms, icon, create_by, create_time, update_by, update_time, remark)
+select '2051', '分发管理', '2047', '4', 'distribute', 'mdm/integration/distribute/index', '', '', '1', '0', 'C', '0', '0', 'mdm:integration:distribute:list', 'share', 'admin', sysdate(), '', null, '分发配置与监控（1.2.0）'
+from dual where not exists (select 1 from sys_menu where menu_id = '2051');
+
+insert into sys_menu (menu_id, menu_name, parent_id, order_num, path, component, query, route_name, is_frame, is_cache, menu_type, visible, status, perms, icon, create_by, create_time, update_by, update_time, remark)
+select '2052', '集成日志', '2047', '5', 'log', 'mdm/integration/log/index', '', '', '1', '0', 'C', '0', '0', 'mdm:integration:log:list', 'documentation', 'admin', sysdate(), '', null, '接收/查询/分发日志（1.2.0）'
+from dual where not exists (select 1 from sys_menu where menu_id = '2052');
+
+-- 按钮权限（F）：应用/接收/查询/分发 = query/add/edit/remove；日志 = edit(重推)/remove(清理)
+insert into sys_menu (menu_id, menu_name, parent_id, order_num, path, component, query, route_name, is_frame, is_cache, menu_type, visible, status, perms, icon)
+select menu_id, menu_name, parent_id, order_num, path, component, query, route_name, is_frame, is_cache, menu_type, visible, status, perms, icon
+from (
+    select '2053' menu_id, '应用查询' menu_name, '2048' parent_id, '1' order_num, '' path, NULL component, '' query, '' route_name, '1' is_frame, '0' is_cache, 'F' menu_type, '0' visible, '0' status, 'mdm:integration:app:query' perms, '#' icon
+    union all select '2054', '应用新增', '2048', '2', '', NULL, '', '', '1', '0', 'F', '0', '0', 'mdm:integration:app:add', '#'
+    union all select '2055', '应用修改', '2048', '3', '', NULL, '', '', '1', '0', 'F', '0', '0', 'mdm:integration:app:edit', '#'
+    union all select '2056', '应用删除', '2048', '4', '', NULL, '', '', '1', '0', 'F', '0', '0', 'mdm:integration:app:remove', '#'
+    union all select '2057', '接收查询', '2049', '1', '', NULL, '', '', '1', '0', 'F', '0', '0', 'mdm:integration:receive:query', '#'
+    union all select '2058', '接收新增', '2049', '2', '', NULL, '', '', '1', '0', 'F', '0', '0', 'mdm:integration:receive:add', '#'
+    union all select '2059', '接收修改', '2049', '3', '', NULL, '', '', '1', '0', 'F', '0', '0', 'mdm:integration:receive:edit', '#'
+    union all select '2060', '接收删除', '2049', '4', '', NULL, '', '', '1', '0', 'F', '0', '0', 'mdm:integration:receive:remove', '#'
+    union all select '2061', '查询接口查询', '2050', '1', '', NULL, '', '', '1', '0', 'F', '0', '0', 'mdm:integration:query:query', '#'
+    union all select '2062', '查询接口新增', '2050', '2', '', NULL, '', '', '1', '0', 'F', '0', '0', 'mdm:integration:query:add', '#'
+    union all select '2063', '查询接口修改', '2050', '3', '', NULL, '', '', '1', '0', 'F', '0', '0', 'mdm:integration:query:edit', '#'
+    union all select '2064', '查询接口删除', '2050', '4', '', NULL, '', '', '1', '0', 'F', '0', '0', 'mdm:integration:query:remove', '#'
+    union all select '2065', '分发查询', '2051', '1', '', NULL, '', '', '1', '0', 'F', '0', '0', 'mdm:integration:distribute:query', '#'
+    union all select '2066', '分发新增', '2051', '2', '', NULL, '', '', '1', '0', 'F', '0', '0', 'mdm:integration:distribute:add', '#'
+    union all select '2067', '分发修改', '2051', '3', '', NULL, '', '', '1', '0', 'F', '0', '0', 'mdm:integration:distribute:edit', '#'
+    union all select '2068', '分发删除', '2051', '4', '', NULL, '', '', '1', '0', 'F', '0', '0', 'mdm:integration:distribute:remove', '#'
+    union all select '2069', '日志重推', '2052', '1', '', NULL, '', '', '1', '0', 'F', '0', '0', 'mdm:integration:log:edit', '#'
+    union all select '2070', '日志清理', '2052', '2', '', NULL, '', '', '1', '0', 'F', '0', '0', 'mdm:integration:log:remove', '#'
+) t
+where not exists (select 1 from sys_menu where menu_id = t.menu_id);
+
+-- 停用原分发菜单（不删除数据）
+update sys_menu set status = '1' where menu_id in ('2006', '2041');
+
+-- admin 角色（role_id=1）授权新菜单
+insert into sys_role_menu (role_id, menu_id)
+select 1, menu_id from sys_menu where menu_id between '2047' and '2070'
+  and not exists (select 1 from sys_role_menu rm where rm.role_id = 1 and rm.menu_id = sys_menu.menu_id);
