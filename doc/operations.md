@@ -1,6 +1,6 @@
 # 主数据管理平台 部署与运维手册
 
-> 适用于 1.1.0。单体后端（ruoyi-admin 含 mdm 模块）+ MySQL 8 + Redis 7 + RabbitMQ 3 + Flowable 6.8.1，Nginx 反代前端。架构详见 `deploy-architecture.md`。
+> 适用于 1.2.0。单体后端（ruoyi-admin 含 mdm 模块）+ MySQL 8 + Redis 7 + RabbitMQ 3 + Flowable 6.8.1，Nginx 反代前端。架构详见 `deploy-architecture.md`。
 
 ## 一、快速启动（Docker Compose）
 
@@ -108,3 +108,66 @@ docker exec mdm-rabbitmq rabbitmqctl list_exchanges
 2. `.env` 补齐 `RABBITMQ_*` 变量（模板见 `.env.example`）
 3. `docker compose up -d`（自动拉起 rabbitmq 容器）
 4. 流程管理页部署审核流程 → 对象绑定流程
+
+## 九、1.2.0 集成管理运维
+
+### 9.1 存量库升级（1.1.0 → 1.2.0）
+
+数据分发升级为集成管理，涉及表重命名与菜单变更，存量库升级顺序：
+
+```bash
+SQL=mdm-backend/sql/mdm
+# 停后端后执行增量迁移（幂等，可重复执行；内容含补列/菜单/新表/表重命名）
+docker exec -i mdm-mysql mysql -uroot -p<MYSQL_PASSWORD> --default-character-set=utf8mb4 mdm < $SQL/upgrade-1.2.0.sql
+docker compose up -d
+```
+
+迁移内容：
+
+| 项 | 说明 |
+|----|------|
+| 表重命名 | `mdm_distribution` → `mdm_distribute_api`；`mdm_distribution_record` → `mdm_distribute_log`（新增 `app_code` 列，经 `mdm_app` 回填，历史数据无损） |
+| 新表 | `mdm_receive_api` / `mdm_query_api`（接口配置）、`mdm_receive_log` / `mdm_query_log`（接口日志） |
+| 菜单 | 新增「审核中心」（2046）与「集成管理」（2047-2070）；原分发菜单停用 |
+| 补列 | `mdm_object` 幂等补 `audit_process_key` / `template_source`（防御） |
+
+> 全新环境无需手动执行（`init.sql` 已含 1.2.0 全部结构）；仅 1.1.0 存量库需走上面迁移。
+
+### 9.2 集成管理 5 菜单
+
+| 菜单 | 作用 |
+|------|------|
+| 应用管理 | 接入方应用注册与凭证（appid/secret），停用即拒绝其所有对外调用；secret 重置后旧值立即失效 |
+| 接收接口管理 | 配置对外接收接口（apiCode / 目标对象 / 启停），创建后外部系统可 `POST /open/integration/receive/{apiCode}` 上报数据 |
+| 查询接口管理 | 配置对外查询接口，外部系统经 `POST /open/integration/query/{apiCode}` 条件查询主数据 |
+| 分发管理 | 原分发配置（配置 / 监控两 Tab），HTTP 回调与 RabbitMQ 双通道，失败重推 |
+| 集成日志 | 接收 / 查询 / 分发三 Tab 独立日志，支持按应用/对象/状态/时间检索与清理 |
+
+### 9.3 对外接口（/open/integration/**）
+
+- 鉴权：Header `X-App-Id` / `X-App-Secret`（对应应用管理的 appid/secret）；缺失或凭证无效返回 401。
+- 接收（幂等）：`POST /open/integration/receive/{apiCode}`，Body `{ "dataCode": "<唯一键值>", "data": { ... } }`
+  - `dataCode` 映射目标对象唯一属性（`unique_flag`/`primary_flag`），重复推送按 UPDATE 处理。
+  - 柔性落库：目标对象绑定审核流程则自动提交审核（`source=API:<appCode>`），否则直接生效。
+  - 目标对象未发布或接收接口已停用时调用报业务异常（500）。
+- 查询：`POST /open/integration/query/{apiCode}`，Body `{ "filters": { "字段": 值 }, "pageNum": 1, "pageSize": 10 }`，返回 `{ total, rows }`。
+- 验证示例：
+
+```bash
+curl -X POST http://localhost:8080/open/integration/receive/recv_demo \
+  -H "X-App-Id: app_xxx" -H "X-App-Secret: sk_xxx" -H "Content-Type: application/json" \
+  -d '{"dataCode":"SUP-2026-001","data":{"supplier_name":"示例","city":"杭州"}}'
+```
+
+### 9.4 日志保留与清理
+
+- 三张日志表全量保留，页面「集成日志」按 type（receive/query/distribute）手动清理（`/mdm/integration/log/clean`，删除指定截止时间前记录）。
+- 分发日志沿用原 record 三态（0 待发送 / 1 成功 / 2 失败），失败记录页面「重推」按日志 id 重放，payload 完整保留不截断。
+- 无定时清理任务；日志量大时再按需增加 Quartz。
+
+### 9.5 回滚（1.2.0 → 1.1.0）
+
+1. 停后端，备份数据库。
+2. 恢复 1.1.0 镜像与旧表名（`mdm_distribute_api` → `mdm_distribution`，`mdm_distribute_log` → `mdm_distribution_record` 反向 RENAME，删 1.2.0 新增表与菜单）。
+3. 恢复前端旧目录（`views/mdm/distribution/` 已在 1.2.0 删除，需从版本库还原）。
+4. 回滚为重大变更操作，执行前务必完整备份并在测试库演练。

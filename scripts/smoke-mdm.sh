@@ -67,7 +67,7 @@ req GET /mdm/template/list
 j '.data|length' | grep -q 5 && ok "模板库 5 个模板" || bad "模板数量不为 5"
 req GET /mdm/quality/dashboard
 j '.data.overview.totalIssues' | grep -qE '^[0-9]+$' && ok "质量大屏聚合 OK" || bad "大屏聚合失败"
-req GET /mdm/distribution/monitor
+req GET /mdm/integration/distribute/monitor
 [ "$(code)" = "200" ] && ok "分发监控 OK" || bad "分发监控失败"
 
 echo "[6/10] 质量：规则与重复检测"
@@ -80,34 +80,34 @@ req POST /mdm/quality/duplicate '{"objectCode":"supplier","fields":["supplier_na
 [ "$(code)" = "200" ] && ok "重复检测执行" || bad "重复检测失败"
 
 echo "[7/10] 分发：应用/配置/推送成功"
-req POST /mdm/distribution/app '{"appName":"冒烟订阅系统"}'
+req POST /mdm/integration/app '{"appName":"冒烟订阅系统"}'
 APPNUM=$(j '.data?.appId // empty'); APPCRE=$(j '.data?.appid // empty'); SECRET=$(j '.data?.secret // empty')
 [ -n "$APPCRE" ] && ok "创建应用 appid=$APPCRE" || { bad "创建应用失败"; resp; }
-req POST /mdm/distribution/config "{\"appId\":$APPNUM,\"objectId\":$SOBJ,\"triggerType\":\"IMMEDIATE\",\"endpointUrl\":\"http://mdm-mock-push:9999/mdm/push\",\"enabled\":\"1\"}"
+req POST /mdm/integration/distribute/config "{\"appId\":$APPNUM,\"objectId\":$SOBJ,\"triggerType\":\"IMMEDIATE\",\"endpointUrl\":\"http://mdm-mock-push:9999/mdm/push\",\"enabled\":\"1\"}"
 [ "$(code)" = "200" ] && ok "创建分发配置" || bad "创建分发配置失败"
 req GET "/mdm/data/supplier/list?pageNum=1&pageSize=1"
 CID2=$(j '[.rows[]?.id][0]')
 req PUT "/mdm/data/supplier/$CID2" '{"city":"上海"}'
-rec_status() { req GET "/mdm/distribution/record/list?pageNum=1&pageSize=5"; j '[.rows[]? | select(.actionType=="UPDATE") | .status][0]'; }
+rec_status() { req GET "/mdm/integration/log/distribute/list?pageNum=1&pageSize=5"; j '[.rows[]? | select(.actionType=="UPDATE") | .status][0]'; }
 ST="0"; for i in 1 2 3 4 5; do ST=$(rec_status); [ "$ST" = "1" ] || [ "$ST" = "2" ] && break; sleep 2; done
 [ "$ST" = "1" ] && ok "异步推送成功" || { bad "推送未成功 status=$ST"; }
 
 echo "[8/10] 分发：失败→修正→重推"
-req GET "/mdm/distribution/config/list?pageSize=50"
+req GET "/mdm/integration/distribute/config/list?pageSize=50"
 # 取最新一条指向 mock 的分发配置（历史多轮运行会残留旧配置，不能取第一条）
 DIST=$(j '[.rows[]? | select(.endpointUrl=="http://mdm-mock-push:9999/mdm/push") | .distId] | max')
-req PUT "/mdm/distribution/config" "{\"distId\":$DIST,\"appId\":$APPNUM,\"objectId\":$SOBJ,\"triggerType\":\"IMMEDIATE\",\"endpointUrl\":\"http://mdm-mock-push:9998/no\",\"enabled\":\"1\"}"
+req PUT "/mdm/integration/distribute/config" "{\"distId\":$DIST,\"appId\":$APPNUM,\"objectId\":$SOBJ,\"triggerType\":\"IMMEDIATE\",\"endpointUrl\":\"http://mdm-mock-push:9998/no\",\"enabled\":\"1\"}"
 [ "$(code)" = "200" ] || { bad "切换死地址失败"; }
 req PUT "/mdm/data/supplier/$CID2" '{"city":"杭州"}'
 REC="null"; for i in 1 2 3 4 5; do
-  req GET "/mdm/distribution/record/list?pageNum=1&pageSize=10"
+  req GET "/mdm/integration/log/distribute/list?pageNum=1&pageSize=10"
   REC=$(j '[.rows[]? | select(.status=="2") | .recordId][0]'); [ "$REC" != "null" ] && break; sleep 2
 done
 [ "$REC" != "null" ] && ok "失败记录生成 rec=$REC" || { bad "未产生失败记录"; }
-req PUT "/mdm/distribution/config" "{\"distId\":$DIST,\"appId\":$APPNUM,\"objectId\":$SOBJ,\"triggerType\":\"IMMEDIATE\",\"endpointUrl\":\"http://mdm-mock-push:9999/mdm/push\",\"enabled\":\"1\"}"
-req PUT "/mdm/distribution/record/retry/$REC"
+req PUT "/mdm/integration/distribute/config" "{\"distId\":$DIST,\"appId\":$APPNUM,\"objectId\":$SOBJ,\"triggerType\":\"IMMEDIATE\",\"endpointUrl\":\"http://mdm-mock-push:9999/mdm/push\",\"enabled\":\"1\"}"
+req PUT "/mdm/integration/log/distribute/retry/$REC"
 sleep 2
-req GET "/mdm/distribution/record/list?pageNum=1&pageSize=8"
+req GET "/mdm/integration/log/distribute/list?pageNum=1&pageSize=8"
 j "[.rows[]? | select(.recordId==$REC) | .status][0]" | grep -qx '1' && ok "重推后成功" || bad "重推后仍失败"
 
 echo "[9/10] Excel：模板/导入/导出"

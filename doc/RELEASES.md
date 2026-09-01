@@ -1,5 +1,45 @@
 # 发布说明 RELEASES
 
+## v1.2.0（2026-09）
+
+主数据管理平台 1.2.0 发布。清零 1.1.0 上线后的 6 类反馈问题，并将「数据分发」重构升级为「集成管理」模块，作为平台对外数据交换枢纽（接收上报 / 查询开放 / 分发推送）。
+
+### 缺陷修复
+
+- **#1 添加属性报 BindingException**：`MdmAttributeMapper.checkAttributeCodeUnique` 双参数缺 `@Param`（MyBatis 命名 arg0/arg1，`#{objectId}` 绑定失败），补注解并全量排查 ruoyi-mdm 所有 mapper 多参数方法。
+- **#2 编码规则选不到数据对象**：确证 live 库对象表齐全，根因是前端 `status:'1'` 过滤排除了草稿对象；去掉过滤，对象发布前即可配置编码规则，并保留幂等补列作存量库防御。
+- **#6 新建流程 404**：若依 `buildMenus` 仅渲染 M（目录）型子菜单，C 下挂 C 不生成路由；新建「审核中心」M 目录（2046），流程管理/设计器挂其下，路由统一 `/mdm/audit/*`。
+
+### 体验优化
+
+- **#4 关系管理下拉化**：源对象/目标对象/引用属性编码由自由文本改下拉，属性编码随源对象联动加载（仅引用类型可选）。
+- **#5 模板库点击无反应**：`template/index.vue` 本地函数 `previewTemplate` 与 API import 同名导致函数体自递归栈溢出；import 别名消除遮蔽。
+
+### 集成管理模块（数据分发升级）
+
+- **5 菜单**：应用管理 / 接收接口管理 / 查询接口管理 / 分发管理 / 集成日志。
+- **应用管理**：复用 `mdm_app`，接入方注册与凭证（appid/secret），支持 secret 重置。
+- **接收接口**：外部 `POST /open/integration/receive/{apiCode}`（Header `X-App-Id` / `X-App-Secret` 鉴权），`dataCode` 映射对象唯一属性幂等 upsert；柔性落库——对象绑定审核流程则自动提交审核，否则直接生效；`source=API:<appCode>` 供血缘；写 `mdm_receive_log`。
+- **查询接口**：外部 `POST /open/integration/query/{apiCode}`，条件查询主数据动态表，写 `mdm_query_log`。
+- **分发管理**：配置（HTTP/MQ 双通道）与监控两 Tab，失败按日志 id 重推（payload 完整保留不截断）。
+- **集成日志**：接收/查询/分发三张独立日志表，按应用/对象/状态/时间检索，支持手动清理。
+
+### 破坏性变更 / 兼容性
+
+- 表重命名：`mdm_distribution` → `mdm_distribute_api`；`mdm_distribution_record` → `mdm_distribute_log`（新增 `app_code` 列，经 `mdm_app` 回填，历史数据无损）。
+- 新增表：`mdm_receive_api` / `mdm_query_api` / `mdm_receive_log` / `mdm_query_log`。
+- 管理侧接口：原 `/mdm/distribution/**` 迁移为 `/mdm/integration/**`（app / receive / query / distribute / log）。
+- 旧 `distribution` 后端包、`MdmDistributionController`、旧 mapper XML、前端 `views/mdm/distribution/` 与 `api/mdm/distribution.ts` 已物理删除（迁移确认后）。
+- 存量库需执行 `sql/mdm/upgrade-1.2.0.sql`（幂等：补列 + 迁移 + 新表 + sys_menu 变更），脚本开头已注释使用说明。
+- 菜单变更：新增「审核中心」（2046）与「集成管理」（2047-2070 目录 + 5 子菜单 + 按钮权限），原分发菜单停用不删数据。
+
+### 已知限制（后续规划）
+
+- 对外接口无 IP 白名单与限流（企业内网部署可接受；公网暴露需升级，限流观察用量后再加）。
+- 集成日志全量保留 + 页面手动清理，无定时任务（量大再加 Quartz）。
+- 接收接口无重放/回调，失败仅记日志留痕。
+- 1.1.0 退回简化为驳回、大屏聚合直查库等限制仍沿用。
+
 ## v1.1.0（2026-08）
 
 主数据管理平台 1.1.0 发布。在 1.0.0 六大能力之上，补齐对象关系建模、Flowable 审核引擎、RabbitMQ 分发通道、质量大屏、血缘追踪、对象模板库，并交付 RuoYi-Cloud 迁移评估报告。
